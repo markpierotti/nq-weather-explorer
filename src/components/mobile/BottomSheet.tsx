@@ -17,8 +17,8 @@ import {
 } from 'react';
 import type { SheetSnap } from '../../state/AppDataContext';
 
-/** Visible sheet height at the peek snap point (handle + summary row). */
-export const SHEET_PEEK_PX = 136;
+/** Fallback peek height until the header (handle + summary row) has been measured. */
+const SHEET_PEEK_FALLBACK_PX = 136;
 /** Space kept free at the top for the map control stack when at "half". */
 const CONTROL_STACK_RESERVE_PX = 12 + 3 * 44 + 2 * 8 + 16;
 const FLING_VELOCITY = 0.45; // px per ms
@@ -64,18 +64,33 @@ export function BottomSheet({ snap, onSnapChange, bottomInset, header, children,
   const sheetRef = useRef<HTMLElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const safeTopProbeRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLDivElement>(null);
   const [safeTop, setSafeTop] = useState(0);
+  // Peek shows exactly the header, so no clipped sliver of the content peeks out above the tab bar.
+  const [peekH, setPeekH] = useState(SHEET_PEEK_FALLBACK_PX);
+
+  useLayoutEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+    const measure = () => {
+      if (el.offsetHeight > 0) setPeekH(el.offsetHeight);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   useLayoutEffect(() => {
     setSafeTop(safeTopProbeRef.current?.offsetHeight ?? 0);
   }, [viewportH]);
 
   const heights = useMemo(() => {
-    const full = Math.max(SHEET_PEEK_PX + 120, viewportH - safeTop - 8 - bottomInset);
+    const full = Math.max(peekH + 120, viewportH - safeTop - 8 - bottomInset);
     const halfTarget = Math.min(Math.round(viewportH * 0.5), viewportH - bottomInset - safeTop - CONTROL_STACK_RESERVE_PX);
-    const half = Math.min(full, Math.max(SHEET_PEEK_PX + 60, halfTarget));
-    return { peek: SHEET_PEEK_PX, half, full } as Record<SheetSnap, number>;
-  }, [viewportH, safeTop, bottomInset]);
+    const half = Math.min(full, Math.max(peekH + 60, halfTarget));
+    return { peek: peekH, half, full } as Record<SheetSnap, number>;
+  }, [viewportH, safeTop, bottomInset, peekH]);
 
   const currentH = useRef(heights[snap]);
 
@@ -228,6 +243,7 @@ export function BottomSheet({ snap, onSnapChange, bottomInset, header, children,
         style={{ bottom: bottomInset, height: heights.full }}
       >
         <div
+          ref={headerRef}
           className="shrink-0 touch-none cursor-grab active:cursor-grabbing"
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}

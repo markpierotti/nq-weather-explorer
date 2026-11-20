@@ -1,8 +1,0 @@
-{
-  "name": "Remix Google Maps Weather Map, Forecast Explorer and Emergency ",
-  "description": "Interactive weather map powered by Google Maps Platform Weather API and Weather Map Tiles with precipitation radar nowcast, hourly \u0026 10-day forecasts, severe weather alerts, and global atmospheric insights.",
-  "requestFramePermissions": [],
-  "majorCapabilities": [
-    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
-  ]
-}

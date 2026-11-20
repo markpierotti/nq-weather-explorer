@@ -39,8 +39,10 @@ function parseBoundedInt(raw: unknown, defVal: number, minVal: number, maxVal: n
 dotenv.config();
 
 const app = express();
-  app.set("trust proxy", 2);
+// Number of reverse-proxy hops in front of the app (e.g. 1 for nginx/Caddy on a VPS).
+app.set('trust proxy', Number.parseInt(process.env.TRUST_PROXY || '1', 10) || false);
 const PORT = 3000;
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-4-hydrogen';
 
 app.use(express.json());
 
@@ -620,26 +622,19 @@ app.get('/api/emergency/proxy', async (req, res) => {
   }
 });
 
-// 12. Gemini Wet-Season Situational Briefing (gemini-4-hydrogen + Google Search Grounding)
+// 12. Gemini Wet-Season Situational Briefing (Gemini + Google Search Grounding)
 app.post('/api/briefing/corridor', async (req, res) => {
   const geminiKey = process.env.GEMINI_API_KEY;
   if (!geminiKey) {
     return res.status(503).json({
-      error: 'GEMINI_API_KEY is not configured in Settings > Secrets. Add GEMINI_API_KEY to enable AI Corridor Briefings.',
+      error: 'GEMINI_API_KEY is not configured. Set GEMINI_API_KEY in .env to enable AI Corridor Briefings.',
     });
   }
 
   const { locationName, multiModelSummary, emergencySummary, blockedFeedsCount } = req.body || {};
 
   try {
-    const ai = new GoogleGenAI({
-      apiKey: geminiKey,
-      httpOptions: {
-        headers: {
-          'User-Agent': 'aistudio-build',
-        },
-      },
-    });
+    const ai = new GoogleGenAI({ apiKey: geminiKey });
 
     const prompt = [
       `You are an operational North Queensland meteorological & road corridor duty officer focusing on ${locationName || 'Ayr / Burdekin & Townsville'} and the Bruce Highway (A1) corridor (Ayr ↔ Home Hill ↔ Giru ↔ Townsville).`,
@@ -659,7 +654,7 @@ app.post('/api/briefing/corridor', async (req, res) => {
     ].join('\n');
 
     const response = await ai.models.generateContent({
-      model: 'gemini-4-hydrogen',
+      model: GEMINI_MODEL,
       contents: prompt,
       config: {
         tools: [{ googleSearch: {} }],
@@ -701,7 +696,7 @@ app.post('/api/briefing/corridor', async (req, res) => {
       citations,
       usedSearchGrounding: citations.length > 0 || Number(blockedFeedsCount || 0) > 0,
       generatedAt: new Date().toISOString(),
-      model: 'gemini-4-hydrogen',
+      model: GEMINI_MODEL,
     });
   } catch (err: any) {
     const safeErr = redactApiKey(err, geminiKey);
@@ -717,21 +712,14 @@ app.post('/api/briefing/cyclone', async (req, res) => {
   const geminiKey = process.env.GEMINI_API_KEY;
   if (!geminiKey) {
     return res.status(503).json({
-      error: 'GEMINI_API_KEY is not configured in Settings > Secrets. Add GEMINI_API_KEY or enter a WeatherNext 3 Maps Weather key.',
+      error: 'GEMINI_API_KEY is not configured. Set GEMINI_API_KEY in .env or enter a WeatherNext 3 Maps Weather key.',
     });
   }
 
   const { locationName, lat, lng, multiModelSummary, cycloneAndRoadItems } = req.body || {};
 
   try {
-    const ai = new GoogleGenAI({
-      apiKey: geminiKey,
-      httpOptions: {
-        headers: {
-          'User-Agent': 'aistudio-build',
-        },
-      },
-    });
+    const ai = new GoogleGenAI({ apiKey: geminiKey });
 
     const prompt = [
       `You are a North Queensland tropical cyclone & severe weather specialist briefing operations for Ayr / Burdekin (-19.57, 147.41), Townsville (-19.26, 146.82), and the active target ${locationName || 'Ayr / Townsville'} (${lat ?? -19.57}, ${lng ?? 147.41}).`,
@@ -764,7 +752,7 @@ app.post('/api/briefing/cyclone', async (req, res) => {
     ].join('\n');
 
     const response = await ai.models.generateContent({
-      model: 'gemini-4-hydrogen',
+      model: GEMINI_MODEL,
       contents: prompt,
       config: {
         tools: [{ googleSearch: {} }],
@@ -818,7 +806,7 @@ app.post('/api/briefing/cyclone', async (req, res) => {
       bullets,
       citations,
       generatedAt: new Date().toISOString(),
-      model: 'gemini-4-hydrogen',
+      model: GEMINI_MODEL,
     });
   } catch (err: any) {
     const safeErr = redactApiKey(err, geminiKey);
@@ -837,52 +825,9 @@ async function startServer() {
     const vite = await createViteServer({
       server: {
         middlewareMode: true,
-        hmr: false,
+        hmr: { server },
       },
       appType: 'spa',
-    });
-
-    // HMR is disabled in AI Studio preview proxies; prevent Vite's default client script
-    // from opening a doomed WebSocket to port 24678 (which rejects at @vite/client:454).
-    app.get('/@vite/client', (_req, res) => {
-      res.type('application/javascript');
-      res.send(`
-const sheetsMap = new Map();
-export function updateStyle(id, content) {
-  let style = sheetsMap.get(id);
-  if (!style) {
-    style = document.createElement('style');
-    style.setAttribute('type', 'text/css');
-    style.setAttribute('data-vite-dev-id', id);
-    style.textContent = content;
-    document.head.appendChild(style);
-    sheetsMap.set(id, style);
-  } else {
-    style.textContent = content;
-  }
-}
-export function removeStyle(id) {
-  const style = sheetsMap.get(id);
-  if (style) {
-    style.remove();
-    sheetsMap.delete(id);
-  }
-}
-export function createHotContext() {
-  return {
-    accept() {},
-    dispose() {},
-    prune() {},
-    invalidate() {},
-    on() {},
-    off() {},
-    send() {},
-    data: {},
-  };
-}
-export function injectQuery(url) { return url; }
-export class ErrorOverlay extends HTMLElement {}
-`);
     });
 
     app.use(vite.middlewares);

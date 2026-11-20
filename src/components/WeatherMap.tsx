@@ -256,7 +256,6 @@ export function WeatherMap(props: WeatherMapProps) {
         clickableIcons={false}
         gestureHandling="greedy"
         className="w-full h-full"
-        internalUsageAttributionIds={['gmp_mcp_codeassist_v1_aistudio']}
       >
         <MapContent {...props} />
       </Map>

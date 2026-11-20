@@ -27,8 +27,8 @@ The application enforces a **strict dual-key separation** to adhere to Google Ma
 
 ```
                        ┌─────────────────────────┐
-                       │   AI Studio Secrets /   │
-                       │   Environment Vars      │
+                       │   .env file /           │
+                       │   environment vars      │
                        └────────────┬────────────┘
                                     │
            ┌────────────────────────┴────────────────────────┐
@@ -48,13 +48,16 @@ The application enforces a **strict dual-key separation** to adhere to Google Ma
 
 ### Environment Variables
 
-Configure these variables in your `.env` file or in the AI Studio **Secrets** panel:
+Configure these variables in your `.env` file (see `.env.example`):
 
 | Variable | Scope | Purpose |
 | :--- | :--- | :--- |
 | `VITE_GOOGLE_MAPS_API_KEY` | Client & Backend | Public key used by the browser to load Google Maps JavaScript API and Places UI Kit. |
 | `GOOGLE_WEATHER_API_KEY` | Backend Only | Secret server-side key for Google Maps Platform Weather, Geocoding, and Places REST APIs. |
+| `GEMINI_API_KEY` | Backend Only | Gemini key for AI corridor briefings and cyclone synthesis (optional). |
+| `GEMINI_MODEL` | Backend Only | Gemini model ID override for briefings. |
 | `PORT` | Backend | Port for Express & Vite dev server (defaults to `3000`). |
+| `TRUST_PROXY` | Backend | Number of reverse-proxy hops in front of the app (defaults to `1`). |
 
 > **Security Note**: `GOOGLE_WEATHER_API_KEY` is kept strictly on the backend inside `server.ts` and is never sent to the browser or bundled into client assets. All source code files contain zero hardcoded API keys.
 
@@ -93,7 +96,7 @@ The backend Express server (`server.ts`) acts as a secure reverse proxy for Goog
 
 ### Installation
 
-1. Clone or extract the repository:
+1. Install dependencies:
    ```bash
    npm install
    ```
@@ -125,6 +128,17 @@ Compile the client bundle and backend server:
 npm run build
 npm start
 ```
+
+### Deploying with Docker (VPS)
+
+```bash
+cp .env.example .env   # fill in keys
+docker compose up -d --build
+```
+
+The app listens on port 3000. Put a TLS-terminating reverse proxy (Caddy or nginx) in front of it — HTTPS is required for geolocation and push notifications on phones. `./data` is mounted into the container for persistent server state.
+
+Keys are read from `.env` at runtime (the browser fetches the public Maps key from `/api/weather/config`), so the image itself contains no secrets.
 
 ### Type Checking & Linting
 

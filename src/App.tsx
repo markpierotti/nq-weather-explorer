@@ -392,7 +392,7 @@ export function App() {
       <span>
         Google Maps Platform quota reached. If you are the app owner, visit{' '}
         <a
-          href="https://developers.google.com/maps/ai/ai-studio?utm_campaign=gmp_mcp_codeassist_v1_aistudio#quota_exceeded_errors"
+          href="https://developers.google.com/maps/documentation/javascript/usage-and-billing"
           target="_blank"
           rel="noopener noreferrer"
           className="underline font-semibold text-white hover:text-[#32ADE6]"
@@ -472,7 +472,6 @@ export function App() {
       key={mapsApiKey}
       apiKey={mapsApiKey}
       libraries={['places', 'maps', 'marker']}
-      solutionChannel="gmp_aistudio_weatherexplorer_v1.0.0"
     >
       <div className="relative w-screen h-screen overflow-hidden bg-[#111113] text-white font-sans flex flex-col">
         {quotaBanner}

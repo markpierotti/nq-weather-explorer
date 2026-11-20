@@ -10,3 +10,4 @@ coverage/
 *.lock
 public/assets/
 .tempmediaStorage/
+data/

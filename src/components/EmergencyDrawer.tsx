@@ -141,6 +141,12 @@ export function EmergencyDrawer({
         return 'Sandbags';
       case 'bulletin':
         return 'Bulletin';
+      case 'river_gauge':
+        return 'River Gauge';
+      case 'traffic':
+        return 'QLDTraffic';
+      case 'bom_warning':
+        return 'BOM Warning';
     }
   };
 

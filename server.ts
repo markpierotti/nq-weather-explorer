@@ -10,6 +10,9 @@ import http from 'http';
 import dotenv from 'dotenv';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
+import { registerFeedRoutes } from './server/feeds/index';
+import { registerPushRoutes, startPushPoller } from './server/push/index';
+import { registerBriefingRoutes } from './server/briefing';
 
 function parseCoordPair(latRaw: unknown, lngRaw: unknown): { lat: number; lng: number } | null {
   if (typeof latRaw !== 'string' && typeof latRaw !== 'number') return null;
@@ -817,6 +820,11 @@ app.post('/api/briefing/cyclone', async (req, res) => {
   }
 });
 
+// Modular routes (server/*)
+registerFeedRoutes(app);
+registerPushRoutes(app);
+registerBriefingRoutes(app);
+
 // Vite & Static Asset Handling
 async function startServer() {
   const server = http.createServer(app);
@@ -851,6 +859,7 @@ async function startServer() {
   const port = Number(process.env.PORT) || PORT;
   server.listen(port, '0.0.0.0', () => {
     console.log(`Weather Map Server running on http://0.0.0.0:${port}`);
+    startPushPoller();
   });
 }
 

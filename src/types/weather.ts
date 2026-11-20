@@ -435,12 +435,18 @@ export type EmergencyCategory =
   | 'bulletin'
   | 'fire_danger'
   | 'evac'
-  | 'sandbag';
+  | 'sandbag'
+  | 'river_gauge'
+  | 'traffic'
+  | 'bom_warning';
 
 export type EmergencySourceHost =
   | 'qld_arcgis'
   | 'burdekin_ims'
-  | 'townsville_ims';
+  | 'townsville_ims'
+  | 'qldtraffic'
+  | 'bom'
+  | 'qld_water';
 
 export interface EmergencyLayerToggles {
   corridor: boolean;
@@ -449,6 +455,45 @@ export interface EmergencyLayerToggles {
   warnings: boolean;
   qfd: boolean;
   support: boolean; // Fuel, Evac, Sandbags
+  gauges: boolean; // River height gauges
+  traffic: boolean; // QLDTraffic road events
+  bomWarnings: boolean; // Official BOM QLD warnings
+}
+
+export type FloodClass = 'below_minor' | 'minor' | 'moderate' | 'major' | 'unknown';
+
+/** Detail attached to items with category 'river_gauge'. */
+export interface RiverGaugeReading {
+  stationId: string;
+  stationName: string;
+  river: string;
+  heightM: number | null;
+  trend: 'rising' | 'falling' | 'steady' | 'unknown';
+  floodClass: FloodClass;
+  thresholds: { minor: number | null; moderate: number | null; major: number | null };
+  observedAt: string | null; // ISO
+  history: Array<{ time: string; heightM: number }>; // oldest -> newest, for sparkline
+}
+
+/** Detail attached to items with category 'traffic'. */
+export interface TrafficEventDetail {
+  eventId: string;
+  eventType: string; // e.g. 'Flooding', 'Hazard', 'Roadworks', 'Crash', 'Special event'
+  eventSubtype?: string;
+  impact?: string; // e.g. 'Closed', 'Lanes affected'
+  isClosure: boolean;
+  roadName?: string;
+  locality?: string;
+}
+
+/** Detail attached to items with category 'bom_warning'. */
+export interface BomWarningDetail {
+  productId: string; // e.g. IDQ20885
+  warningType: string; // e.g. 'Severe Thunderstorm Warning', 'Flood Warning'
+  areas: string[]; // forecast districts / catchments named in the warning
+  issuedAt: string | null; // ISO
+  expiresAt: string | null; // ISO
+  url?: string;
 }
 
 export interface EmergencyFeatureItem {
@@ -469,6 +514,18 @@ export interface EmergencyFeatureItem {
   isCorridorPriority: boolean;
   corridorTags: string[];
   rawProperties?: Record<string, any>;
+  gauge?: RiverGaugeReading;
+  traffic?: TrafficEventDetail;
+  bomWarning?: BomWarningDetail;
+}
+
+/** Response shape of GET /api/emergency/{traffic,bom-warnings,gauges}. */
+export interface EmergencyFeedResponse {
+  feed: 'traffic' | 'bom-warnings' | 'gauges';
+  items: EmergencyFeatureItem[];
+  fetchedAt: number;
+  fromCache: boolean;
+  error?: string;
 }
 
 export interface EmergencyFeedStatus {
@@ -495,9 +552,27 @@ export interface GroundingCitation {
   uri: string;
 }
 
+export type BriefingRisk = 'LOW' | 'MODERATE' | 'HIGH' | 'EXTREME';
+
+export interface BriefingSection {
+  title: string;
+  risk: BriefingRisk;
+  summary: string;
+  details: string[];
+}
+
+/** Structured briefing returned by /api/briefing/corridor (and embedded in cyclone synthesis). */
+export interface StructuredBriefing {
+  overallRisk: BriefingRisk;
+  headline: string;
+  sections: BriefingSection[];
+  actions: string[];
+}
+
 export interface CorridorBriefingResponse {
   locationName: string;
-  bullets: string[];
+  structured?: StructuredBriefing;
+  bullets: string[]; // legacy flat bullets, kept for backwards compatibility
   rawText: string;
   citations: GroundingCitation[];
   usedSearchGrounding: boolean;
@@ -568,5 +643,33 @@ export interface GeminiCycloneSynthesis {
   citations: GroundingCitation[];
   generatedAt: string;
   model: string;
+  structured?: StructuredBriefing;
 }
+
+// ---------------------------------------------------------------------------
+// Briefing follow-up chat (POST /api/briefing/chat, Server-Sent Events)
+// ---------------------------------------------------------------------------
+
+export interface BriefingChatMessage {
+  role: 'user' | 'model';
+  text: string;
+}
+
+export interface BriefingChatRequest {
+  messages: BriefingChatMessage[];
+  context: {
+    locationName: string;
+    lat: number;
+    lng: number;
+    multiModelSummary?: unknown;
+    emergencySummary?: unknown;
+  };
+}
+
+/** SSE `data:` payloads, one JSON object per event. */
+export type BriefingChatEvent =
+  | { type: 'chunk'; text: string }
+  | { type: 'citations'; citations: GroundingCitation[] }
+  | { type: 'done' }
+  | { type: 'error'; error: string };
 

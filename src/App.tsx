@@ -103,6 +103,9 @@ export function App() {
     warnings: true,
     qfd: true,
     support: true,
+    gauges: true,
+    traffic: true,
+    bomWarnings: true,
   });
   const [selectedEmergencyItem, setSelectedEmergencyItem] = useState<EmergencyFeatureItem | null>(null);
 

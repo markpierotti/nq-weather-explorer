@@ -8,6 +8,7 @@ import {
   EmergencyBundle,
   EmergencyCategory,
   EmergencyFeatureItem,
+  EmergencyFeedResponse,
   EmergencyFeedStatus,
   EmergencySourceHost,
   LatLng,
@@ -705,7 +706,41 @@ export async function fetchAllNqEmergencyFeeds(proxyUrl: string = DEFAULT_EMERGE
     });
   });
 
-  await Promise.allSettled([...arcgisPromises, ...guardianPromises]);
+  // Server-side feeds (QLDTraffic, BOM warnings, river gauges): cached on our own server,
+  // so they never need the CORS proxy. See server/feeds/index.ts.
+  const serverFeeds: Array<{ path: string; id: string; label: string; host: EmergencySourceHost }> = [
+    { path: '/api/emergency/traffic', id: 'qldtraffic', label: 'QLDTraffic Road Events', host: 'qldtraffic' },
+    { path: '/api/emergency/bom-warnings', id: 'bom-warnings', label: 'BOM QLD Warnings', host: 'bom' },
+    { path: '/api/emergency/gauges', id: 'river-gauges', label: 'BOM River Heights', host: 'bom' },
+  ];
+  const serverPromises = serverFeeds.map(async (feed) => {
+    try {
+      const res = await fetch(feed.path, { signal: AbortSignal.timeout(20000) });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const body = (await res.json()) as EmergencyFeedResponse;
+      const items = Array.isArray(body.items) ? body.items : [];
+      allItems.push(...items);
+      feedStatuses.push({
+        id: feed.id,
+        label: feed.label,
+        host: feed.host,
+        status: items.length > 0 ? 'ok' : body.error ? 'blocked' : 'empty',
+        count: items.length,
+        error: body.error,
+      });
+    } catch (err: any) {
+      feedStatuses.push({
+        id: feed.id,
+        label: feed.label,
+        host: feed.host,
+        status: 'blocked',
+        count: 0,
+        error: err?.message || 'Request failed',
+      });
+    }
+  });
+
+  await Promise.allSettled([...arcgisPromises, ...guardianPromises, ...serverPromises]);
 
   // Sort: Corridor priority first, then severity (critical > high > moderate > info)
   const sevRank: Record<EmergencyFeatureItem['severity'], number> = {

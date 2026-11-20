@@ -18,6 +18,9 @@ import {
   MapPin,
   ChevronDown,
   ChevronUp,
+  Waves,
+  TrafficCone,
+  Megaphone,
 } from 'lucide-react';
 import {
   EmergencyBundle,
@@ -26,6 +29,7 @@ import {
 } from '../types/weather';
 import { DEFAULT_EMERGENCY_PROXY } from '../services/emergencyApi';
 import { IosSwitch } from './panels/ModeToggles';
+import { GaugeDetail } from './emergency/GaugeDetail';
 
 interface EmergencyDrawerProps {
   isEnabled: boolean;
@@ -38,7 +42,11 @@ interface EmergencyDrawerProps {
   onFocusItem: (item: EmergencyFeatureItem) => void;
 }
 
-type CategoryFilter = 'all' | 'corridor' | 'road' | 'outage' | 'warning' | 'qfd' | 'support';
+type CategoryFilter = 'all' | 'corridor' | 'road' | 'outage' | 'warning' | 'gauges' | 'qfd' | 'support';
+
+const isRoad = (i: EmergencyFeatureItem) => i.category === 'road' || i.category === 'traffic';
+const isWarning = (i: EmergencyFeatureItem) =>
+  i.category === 'warning' || i.category === 'cyclone' || i.category === 'bom_warning';
 
 export function EmergencyDrawer({
   isEnabled,
@@ -62,9 +70,10 @@ export function EmergencyDrawer({
     const q = searchQuery.trim().toLowerCase();
     return items.filter((item) => {
       if (filter === 'corridor' && !item.isCorridorPriority) return false;
-      if (filter === 'road' && item.category !== 'road') return false;
+      if (filter === 'road' && !isRoad(item)) return false;
       if (filter === 'outage' && item.category !== 'outage') return false;
-      if (filter === 'warning' && item.category !== 'warning' && item.category !== 'cyclone') return false;
+      if (filter === 'warning' && !isWarning(item)) return false;
+      if (filter === 'gauges' && item.category !== 'river_gauge') return false;
       if (filter === 'qfd' && item.category !== 'qfd' && item.category !== 'fire_danger') return false;
       if (
         filter === 'support' &&
@@ -86,9 +95,10 @@ export function EmergencyDrawer({
     return {
       all: items.length,
       corridor: items.filter((i) => i.isCorridorPriority).length,
-      road: items.filter((i) => i.category === 'road').length,
+      road: items.filter(isRoad).length,
       outage: items.filter((i) => i.category === 'outage').length,
-      warning: items.filter((i) => i.category === 'warning' || i.category === 'cyclone').length,
+      warning: items.filter(isWarning).length,
+      gauges: items.filter((i) => i.category === 'river_gauge').length,
       qfd: items.filter((i) => i.category === 'qfd' || i.category === 'fire_danger').length,
       support: items.filter((i) => ['fuel', 'evac', 'sandbag', 'bulletin'].includes(i.category)).length,
     };
@@ -110,6 +120,12 @@ export function EmergencyDrawer({
       case 'evac':
       case 'sandbag':
         return <Fuel className="w-3.5 h-3.5 text-[#34c759] shrink-0" />;
+      case 'river_gauge':
+        return <Waves className="w-3.5 h-3.5 text-[#32ADE6] shrink-0" />;
+      case 'traffic':
+        return <TrafficCone className="w-3.5 h-3.5 text-[#ff9500] shrink-0" />;
+      case 'bom_warning':
+        return <Megaphone className="w-3.5 h-3.5 text-[#ff3b30] shrink-0" />;
       default:
         return <AlertTriangle className="w-3.5 h-3.5 text-white/60 shrink-0" />;
     }
@@ -279,6 +295,7 @@ export function EmergencyDrawer({
                 { id: 'road', label: `Roads (${counts.road})` },
                 { id: 'outage', label: `Outages (${counts.outage})` },
                 { id: 'warning', label: `Warnings (${counts.warning})` },
+                { id: 'gauges', label: `Rivers (${counts.gauges})` },
                 { id: 'qfd', label: `QFD (${counts.qfd})` },
                 { id: 'support', label: `Support (${counts.support})` },
               ] as Array<{ id: CategoryFilter; label: string }>
@@ -325,9 +342,9 @@ export function EmergencyDrawer({
                     }`}
                   >
                     <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-start gap-2.5 min-w-0">
+                      <div className="flex items-start gap-2.5 min-w-0 flex-1">
                         <div className="mt-0.5">{getCategoryIcon(item.category)}</div>
-                        <div className="min-w-0">
+                        <div className="min-w-0 flex-1">
                           <div className="text-[11px] text-white/55 flex flex-wrap items-center gap-1.5">
                             <span className="font-semibold text-white/85">
                               {getCategoryLabel(item.category)}
@@ -354,10 +371,16 @@ export function EmergencyDrawer({
                             </div>
                           )}
 
-                          {item.description && (
-                            <p className="text-[11px] text-white/65 mt-1 leading-relaxed line-clamp-3">
-                              {item.description}
-                            </p>
+                          {item.gauge ? (
+                            <div className="mt-1.5">
+                              <GaugeDetail gauge={item.gauge} tone="dark" />
+                            </div>
+                          ) : (
+                            item.description && (
+                              <p className="text-[11px] text-white/65 mt-1 leading-relaxed line-clamp-3">
+                                {item.description}
+                              </p>
+                            )
                           )}
                         </div>
                       </div>

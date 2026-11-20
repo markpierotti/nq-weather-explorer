@@ -246,7 +246,10 @@ export async function fetchRiverGauges(): Promise<EmergencyFeatureItem[]> {
       lng: st.lng,
       geometryType: 'Point',
       updatedAt: observedAt || undefined,
-      isCorridorPriority: st.corridorTags.length > 0,
+      // Only flag corridor priority once a corridor gauge is actually in flood, so quiet days
+      // don't pin 10 below-minor gauges to the top of the emergency list.
+      isCorridorPriority:
+        st.corridorTags.length > 0 && (floodClass === 'minor' || floodClass === 'moderate' || floodClass === 'major'),
       corridorTags: st.corridorTags,
       rawProperties: { bomTendency: row.tendency, bomClassification: row.classification, tableUrl: BOM_BASE + row.tablePath },
       gauge,

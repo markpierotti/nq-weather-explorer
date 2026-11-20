@@ -6,8 +6,10 @@
 
 import { useEffect, useMemo } from 'react';
 import { AdvancedMarker, InfoWindow, Pin, useMap } from '@vis.gl/react-google-maps';
+import { Waves } from 'lucide-react';
 import { EmergencyFeatureItem, EmergencyLayerToggles } from '../types/weather';
 import { BRUCE_HWY_CORRIDOR_PATH } from '../utils/mockWeatherData';
+import { FLOOD_CLASS_COLOR, GaugeDetail, formatGaugeTime } from './emergency/GaugeDetail';
 
 interface EmergencyMapLayersProps {
   items: EmergencyFeatureItem[];
@@ -68,6 +70,23 @@ function getPinStyle(item: EmergencyFeatureItem): {
         glyphColor: '#ffffff',
         glyphText: 'S',
       };
+    case 'traffic': {
+      const closed = item.traffic?.isClosure;
+      const flood = /flood/i.test(item.traffic?.eventType ?? '');
+      return {
+        background: closed ? '#dc2626' : flood ? '#0369a1' : '#d97706',
+        borderColor: closed ? '#7f1d1d' : flood ? '#0c4a6e' : '#78350f',
+        glyphColor: '#ffffff',
+        glyphText: closed ? '✕' : flood ? '≈' : 'T',
+      };
+    }
+    case 'bom_warning':
+      return {
+        background: item.severity === 'critical' ? '#be123c' : item.severity === 'high' ? '#e11d48' : '#f59e0b',
+        borderColor: '#881337',
+        glyphColor: '#ffffff',
+        glyphText: 'W',
+      };
     default:
       return {
         background: '#475569',
@@ -95,6 +114,9 @@ export function EmergencyMapLayers({
       if (item.category === 'fuel' || item.category === 'evac' || item.category === 'sandbag' || item.category === 'bulletin') {
         return layerToggles.support;
       }
+      if (item.category === 'river_gauge') return layerToggles.gauges;
+      if (item.category === 'traffic') return layerToggles.traffic;
+      if (item.category === 'bom_warning') return layerToggles.bomWarnings;
       return true;
     });
   }, [items, layerToggles]);
@@ -139,6 +161,10 @@ export function EmergencyMapLayers({
       const color =
         item.category === 'cyclone'
           ? '#e11d48'
+          : item.category === 'traffic'
+          ? item.traffic?.isClosure
+            ? '#dc2626'
+            : '#d97706'
           : item.category === 'road'
           ? '#d97706'
           : '#0284c7';
@@ -183,6 +209,30 @@ export function EmergencyMapLayers({
       {visibleItems
         .filter((item) => item.lat !== null && item.lng !== null)
         .map((item) => {
+          if (item.category === 'river_gauge' && item.gauge) {
+            const g = item.gauge;
+            const flooding = g.floodClass === 'minor' || g.floodClass === 'moderate' || g.floodClass === 'major';
+            return (
+              <AdvancedMarker
+                key={item.id}
+                position={{ lat: item.lat as number, lng: item.lng as number }}
+                title={`${item.title}: ${g.heightM !== null ? `${g.heightM.toFixed(2)} m` : 'no reading'}`}
+                zIndex={flooding ? 70 : 35}
+                onClick={() => onSelectItem(item)}
+              >
+                <div
+                  className="flex items-center justify-center rounded-full border-2 border-white shadow-md"
+                  style={{
+                    background: FLOOD_CLASS_COLOR[g.floodClass],
+                    width: flooding ? 30 : 22,
+                    height: flooding ? 30 : 22,
+                  }}
+                >
+                  <Waves className={flooding ? 'w-4 h-4 text-white' : 'w-3 h-3 text-white'} aria-hidden="true" />
+                </div>
+              </AdvancedMarker>
+            );
+          }
           const pin = getPinStyle(item);
           return (
             <AdvancedMarker
@@ -218,12 +268,34 @@ export function EmergencyMapLayers({
             {selectedItem.subtitle && selectedItem.subtitle !== selectedItem.title && (
               <div className="text-[11px] font-medium text-slate-700">{selectedItem.subtitle}</div>
             )}
-            {selectedItem.description && (
-              <p className="text-[11px] text-slate-600 leading-relaxed max-h-28 overflow-y-auto">
-                {selectedItem.description}
-              </p>
+            {selectedItem.gauge ? (
+              <GaugeDetail gauge={selectedItem.gauge} tone="light" />
+            ) : (
+              selectedItem.description && (
+                <p className="text-[11px] text-slate-600 leading-relaxed max-h-28 overflow-y-auto">
+                  {selectedItem.description}
+                </p>
+              )
             )}
-            {selectedItem.updatedAt && (
+            {selectedItem.bomWarning && (
+              <div className="text-[10px] text-slate-500 space-y-0.5">
+                {selectedItem.bomWarning.areas.length > 0 && <div>Areas: {selectedItem.bomWarning.areas.join(', ')}</div>}
+                {formatGaugeTime(selectedItem.bomWarning.issuedAt) && (
+                  <div>Issued {formatGaugeTime(selectedItem.bomWarning.issuedAt)}</div>
+                )}
+                {selectedItem.bomWarning.url && (
+                  <a
+                    href={selectedItem.bomWarning.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-semibold text-sky-700 underline"
+                  >
+                    Full warning on bom.gov.au
+                  </a>
+                )}
+              </div>
+            )}
+            {selectedItem.updatedAt && !selectedItem.gauge && (
               <div className="text-[10px] font-mono text-slate-400 pt-1 border-t border-slate-100">
                 Updated: {selectedItem.updatedAt}
               </div>

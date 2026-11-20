@@ -21,7 +21,6 @@ const MAP_STYLES: Array<{ id: MapStyle; label: string }> = [
   { id: 'terrain', label: 'Terrain' },
 ];
 
-// TODO(Phase 3): gauges / traffic / bomWarnings have toggles but no map rendering yet.
 const EMERGENCY_LAYERS: Array<{ key: keyof EmergencyLayerToggles; label: string }> = [
   { key: 'corridor', label: 'Bruce Hwy corridor' },
   { key: 'roads', label: 'Road closures' },

@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>North Queensland Weather, Radar & Corridor Disaster Explorer</title>
+    <meta
+      name="description"
+      content="North Queensland multi-model weather forecast comparison (Google WeatherNext 2, BOM, ECMWF, GFS), animated RainViewer radar, Bruce Highway corridor road closures, Ergon outages, and QLD emergency overlays."
+    />
+    <meta property="og:title" content="North Queensland Weather, Radar & Corridor Disaster Explorer" />
+    <meta
+      property="og:description"
+      content="North Queensland multi-model weather forecast comparison (Google WeatherNext 2, BOM, ECMWF, GFS), animated RainViewer radar, Bruce Highway corridor road closures, Ergon outages, and QLD emergency overlays."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="North Queensland Weather & Corridor Explorer" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="North Queensland Weather, Radar & Corridor Disaster Explorer" />
+    <meta
+      name="twitter:description"
+      content="North Queensland multi-model weather forecast comparison (Google WeatherNext 2, BOM, ECMWF, GFS), animated RainViewer radar, Bruce Highway corridor road closures, Ergon outages, and QLD emergency overlays."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200;300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "North Queensland Weather, Radar & Corridor Disaster Explorer",
+        "applicationCategory": "WeatherApplication",
+        "operatingSystem": "All",
+        "description": "North Queensland multi-model weather comparison (WeatherNext 2, BOM, ECMWF, GFS), RainViewer radar timeline, and Burdekin/Townsville corridor emergency overlays.",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      }
+    </script>
+  </head>
+  <body class="bg-[#111113] text-white antialiased overflow-hidden selection:bg-[#32ADE6] selection:text-white font-sans">
+    <div id="root" class="h-screen w-screen overflow-hidden"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

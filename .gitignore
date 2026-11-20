@@ -11,3 +11,7 @@ coverage/
 public/assets/
 .tempmediaStorage/
 data/
+
+# Agent skills installed locally (npx skills add), not part of the app
+.claude/skills/
+skills-lock.json

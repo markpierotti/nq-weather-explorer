@@ -7,3 +7,5 @@ data
 !.env.example
 *.log
 .DS_Store
+.claude
+skills-lock.json

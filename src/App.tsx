@@ -6,6 +6,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { APIProvider } from '@vis.gl/react-google-maps';
+import { MotionConfig } from 'motion/react';
 import {
   EmergencyBundle,
   EmergencyFeatureItem,
@@ -30,7 +31,18 @@ import {
   setStoredWn3ApiKey,
 } from './services/weatherNext3Api';
 import { WeatherMap } from './components/WeatherMap';
-import { WeatherSidebar, SidebarTab } from './components/WeatherSidebar';
+import { WeatherSidebar } from './components/WeatherSidebar';
+import { MobileShell } from './components/mobile/MobileShell';
+import { useIsDesktop } from './hooks/useIsDesktop';
+import {
+  AppData,
+  AppDataProvider,
+  RadarData,
+  RadarDataProvider,
+  RadarSpeed,
+  SheetSnap,
+  SidebarTab,
+} from './state/AppDataContext';
 
 const SAVED_LOCATIONS_KEY = 'nq_saved_locations_v1';
 
@@ -84,14 +96,17 @@ export function App() {
   const [activeFrameIndex, setActiveFrameIndex] = useState<number>(0);
   const [isRadarPlaying, setIsRadarPlaying] = useState<boolean>(false);
 
+  const [radarSpeed, setRadarSpeed] = useState<RadarSpeed>(1);
   const [radarOpacity, setRadarOpacity] = useState<number>(0.75);
   const [radarVisible, setRadarVisible] = useState<boolean>(true);
 
-  // Open sidebar by default on desktop (>= 1024px), collapsed on smaller screens
-  const [isCollapsed, setIsCollapsed] = useState<boolean>(() =>
-    typeof window !== 'undefined' ? window.innerWidth < 1024 : false
-  );
+  // Shell: desktop (>= 1024px) left sidebar vs. mobile bottom sheet + tab bar
+  const isDesktop = useIsDesktop();
+  const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
+  const [sheetSnap, setSheetSnap] = useState<SheetSnap>('peek');
   const [activeTab, setActiveTab] = useState<SidebarTab>('overview');
+  const [isLayersMenuOpen, setIsLayersMenuOpen] = useState<boolean>(false);
+  const [searchFocusToken, setSearchFocusToken] = useState<number>(0);
 
   // Emergency layer & dashboard OFF by default
   const [emergencyDashboardEnabled, setEmergencyDashboardEnabled] = useState<boolean>(false);
@@ -154,9 +169,9 @@ export function App() {
     const total = rainViewerData.frames.length;
     const timer = setInterval(() => {
       setActiveFrameIndex((prev) => (prev + 1) % total);
-    }, 650);
+    }, 650 / radarSpeed);
     return () => clearInterval(timer);
-  }, [isRadarPlaying, rainViewerData]);
+  }, [isRadarPlaying, rainViewerData, radarSpeed]);
 
   // Load keyless Open-Meteo current weatherBundle + Multi-Model ($0 keyless WeatherNext 2 / ECMWF / GFS + BOM).
   // Keep GOOGLE_WEATHER_API_KEY OFF during routine browsing to protect the 100 calls/day free quota.
@@ -376,17 +391,63 @@ export function App() {
     setEmergencyLayers((prev) => ({ ...prev, [key]: !prev[key] }));
   }, []);
 
-  const handleFocusEmergencyItem = useCallback((item: EmergencyFeatureItem) => {
-    setSelectedEmergencyItem(item);
-    // Ensure corresponding layer is enabled
-    if (item.category === 'road') setEmergencyLayers((p) => ({ ...p, roads: true }));
-    if (item.category === 'outage') setEmergencyLayers((p) => ({ ...p, outages: true }));
-    if (item.category === 'warning' || item.category === 'cyclone') setEmergencyLayers((p) => ({ ...p, warnings: true }));
-    if (item.category === 'qfd' || item.category === 'fire_danger') setEmergencyLayers((p) => ({ ...p, qfd: true }));
-    if (['fuel', 'evac', 'sandbag', 'bulletin'].includes(item.category)) {
-      setEmergencyLayers((p) => ({ ...p, support: true }));
+  const handleFocusEmergencyItem = useCallback(
+    (item: EmergencyFeatureItem) => {
+      setSelectedEmergencyItem(item);
+      // Ensure corresponding layer is enabled
+      if (item.category === 'road') setEmergencyLayers((p) => ({ ...p, roads: true }));
+      if (item.category === 'outage') setEmergencyLayers((p) => ({ ...p, outages: true }));
+      if (item.category === 'warning' || item.category === 'cyclone') setEmergencyLayers((p) => ({ ...p, warnings: true }));
+      if (item.category === 'qfd' || item.category === 'fire_danger') setEmergencyLayers((p) => ({ ...p, qfd: true }));
+      if (['fuel', 'evac', 'sandbag', 'bulletin'].includes(item.category)) {
+        setEmergencyLayers((p) => ({ ...p, support: true }));
+      }
+      if (item.category === 'river_gauge') setEmergencyLayers((p) => ({ ...p, gauges: true }));
+      if (item.category === 'traffic') setEmergencyLayers((p) => ({ ...p, traffic: true }));
+      if (item.category === 'bom_warning') setEmergencyLayers((p) => ({ ...p, bomWarnings: true }));
+      // Mobile: drop the sheet so the map (and the item) is visible
+      if (!isDesktop) setSheetSnap('peek');
+    },
+    [isDesktop]
+  );
+
+  const handleChangeTab = useCallback(
+    (tab: SidebarTab) => {
+      setActiveTab(tab);
+      // Mobile: picking a tab while the sheet is collapsed opens it to half height
+      if (!isDesktop) setSheetSnap((s) => (s === 'peek' ? 'half' : s));
+    },
+    [isDesktop]
+  );
+
+  const handleOpenSearch = useCallback(() => {
+    if (isDesktop) {
+      setIsCollapsed(false);
+    } else {
+      setActiveTab('overview');
+      setSheetSnap('full');
+      setIsLayersMenuOpen(false);
     }
+    setSearchFocusToken((t) => t + 1);
+  }, [isDesktop]);
+
+  const handleChangeFrameIndex = useCallback((idx: number) => {
+    setIsRadarPlaying(false);
+    setActiveFrameIndex(idx);
   }, []);
+
+  const handleToggleUnitSystem = useCallback(
+    () => setUnitSystem((p) => (p === 'METRIC' ? 'IMPERIAL' : 'METRIC')),
+    []
+  );
+  const handleToggleSidebar = useCallback(() => setIsCollapsed((c) => !c), []);
+  const handleToggleRadarPlay = useCallback(() => setIsRadarPlaying((p) => !p), []);
+  const handleToggleRadarSpeed = useCallback(() => setRadarSpeed((s) => (s === 1 ? 2 : 1)), []);
+  const handleToggleRadarVisible = useCallback(() => setRadarVisible((v) => !v), []);
+  const handleRefreshEmergency = useCallback(
+    () => loadEmergencyFeeds(emergencyProxyUrl),
+    [loadEmergencyFeeds, emergencyProxyUrl]
+  );
 
   const mapsApiKey = apiKey || (import.meta as any).env?.VITE_GOOGLE_MAPS_API_KEY || '';
 
@@ -407,66 +468,159 @@ export function App() {
     </div>
   ) : null;
 
-  const sidebarEl = (
-    <WeatherSidebar
-      selectedLocation={selectedLocation}
-      savedLocations={savedLocations}
-      onAddLocation={handleAddLocation}
-      onRemoveSavedLocation={handleRemoveSavedLocation}
-      weatherBundle={weatherBundle}
-      multiModelBundle={multiModelBundle}
-      emergencyBundle={emergencyBundle}
-      isLoadingWeather={isLoadingWeather}
-      isLoadingModels={isLoadingModels}
-      isLoadingEmergency={isLoadingEmergency}
-      unitSystem={unitSystem}
-      onToggleUnitSystem={() => setUnitSystem((p) => (p === 'METRIC' ? 'IMPERIAL' : 'METRIC'))}
-      onSelectLocation={handleSelectLocation}
-      onRefreshAll={handleRefreshAll}
-      onRefreshEmergency={() => loadEmergencyFeeds(emergencyProxyUrl)}
-      isCollapsed={isCollapsed}
-      onToggleCollapse={() => setIsCollapsed((c) => !c)}
-      activeTab={activeTab}
-      onChangeTab={setActiveTab}
-      emergencyDashboardEnabled={emergencyDashboardEnabled}
-      onToggleEmergencyDashboard={handleToggleEmergencyDashboard}
-      emergencyLayers={emergencyLayers}
-      onToggleEmergencyLayer={handleToggleEmergencyLayer}
-      emergencyProxyUrl={emergencyProxyUrl}
-      onChangeEmergencyProxyUrl={setEmergencyProxyUrl}
-      onFocusEmergencyItem={handleFocusEmergencyItem}
-      cycloneMode={cycloneMode}
-      onToggleCycloneMode={handleToggleCycloneMode}
-      threatDetection={threatDetection}
-      wn3ApiKey={wn3ApiKey}
-      onSaveWn3ApiKey={handleSaveWn3ApiKey}
-      wn3Bundle={wn3Bundle}
-      cycloneSynthesis={cycloneSynthesis}
-      isLoadingCyclone={isLoadingCyclone}
-      cycloneError={cycloneError}
-      onRefreshCyclone={loadCycloneThreatData}
-      onFallbackCycloneToGemini={handleFallbackCycloneToGemini}
-    />
+  const isMapAvailable = isConfigReady && Boolean(mapsApiKey);
+
+  const appData = useMemo<AppData>(
+    () => ({
+      selectedLocation,
+      savedLocations,
+      onSelectLocation: handleSelectLocation,
+      onAddLocation: handleAddLocation,
+      onRemoveSavedLocation: handleRemoveSavedLocation,
+      weatherBundle,
+      multiModelBundle,
+      isLoadingWeather,
+      isLoadingModels,
+      unitSystem,
+      onToggleUnitSystem: handleToggleUnitSystem,
+      onRefreshAll: handleRefreshAll,
+      isDesktop,
+      activeTab,
+      onChangeTab: handleChangeTab,
+      isSidebarCollapsed: isCollapsed,
+      onToggleSidebar: handleToggleSidebar,
+      sheetSnap,
+      onChangeSheetSnap: setSheetSnap,
+      onOpenSearch: handleOpenSearch,
+      searchFocusToken,
+      isLayersMenuOpen,
+      onSetLayersMenuOpen: setIsLayersMenuOpen,
+      isMapAvailable,
+      emergencyBundle,
+      isLoadingEmergency,
+      emergencyDashboardEnabled,
+      onToggleEmergencyDashboard: handleToggleEmergencyDashboard,
+      emergencyLayers,
+      onToggleEmergencyLayer: handleToggleEmergencyLayer,
+      emergencyProxyUrl,
+      onChangeEmergencyProxyUrl: setEmergencyProxyUrl,
+      onRefreshEmergency: handleRefreshEmergency,
+      selectedEmergencyItem,
+      onSelectEmergencyItem: setSelectedEmergencyItem,
+      onFocusEmergencyItem: handleFocusEmergencyItem,
+      cycloneMode,
+      onToggleCycloneMode: handleToggleCycloneMode,
+      threatDetection,
+      wn3ApiKey,
+      onSaveWn3ApiKey: handleSaveWn3ApiKey,
+      wn3Bundle,
+      cycloneSynthesis,
+      isLoadingCyclone,
+      cycloneError,
+      onRefreshCyclone: loadCycloneThreatData,
+      onFallbackCycloneToGemini: handleFallbackCycloneToGemini,
+    }),
+    [
+      selectedLocation,
+      savedLocations,
+      handleSelectLocation,
+      handleAddLocation,
+      handleRemoveSavedLocation,
+      weatherBundle,
+      multiModelBundle,
+      isLoadingWeather,
+      isLoadingModels,
+      unitSystem,
+      handleToggleUnitSystem,
+      handleRefreshAll,
+      isDesktop,
+      activeTab,
+      handleChangeTab,
+      isCollapsed,
+      handleToggleSidebar,
+      sheetSnap,
+      handleOpenSearch,
+      searchFocusToken,
+      isLayersMenuOpen,
+      isMapAvailable,
+      emergencyBundle,
+      isLoadingEmergency,
+      emergencyDashboardEnabled,
+      handleToggleEmergencyDashboard,
+      emergencyLayers,
+      handleToggleEmergencyLayer,
+      emergencyProxyUrl,
+      handleRefreshEmergency,
+      selectedEmergencyItem,
+      handleFocusEmergencyItem,
+      cycloneMode,
+      handleToggleCycloneMode,
+      threatDetection,
+      wn3ApiKey,
+      handleSaveWn3ApiKey,
+      wn3Bundle,
+      cycloneSynthesis,
+      isLoadingCyclone,
+      cycloneError,
+      loadCycloneThreatData,
+      handleFallbackCycloneToGemini,
+    ]
   );
 
-  if (!isConfigReady || !mapsApiKey) {
+  const radarData = useMemo<RadarData>(
+    () => ({
+      rainViewerData,
+      activeFrameIndex,
+      onChangeFrameIndex: handleChangeFrameIndex,
+      isRadarPlaying,
+      onToggleRadarPlay: handleToggleRadarPlay,
+      radarSpeed,
+      onToggleRadarSpeed: handleToggleRadarSpeed,
+      radarOpacity,
+      onChangeRadarOpacity: setRadarOpacity,
+      radarVisible,
+      onToggleRadarVisible: handleToggleRadarVisible,
+    }),
+    [
+      rainViewerData,
+      activeFrameIndex,
+      handleChangeFrameIndex,
+      isRadarPlaying,
+      handleToggleRadarPlay,
+      radarSpeed,
+      handleToggleRadarSpeed,
+      radarOpacity,
+      radarVisible,
+      handleToggleRadarVisible,
+    ]
+  );
+
+  const shellEl = isDesktop ? <WeatherSidebar /> : <MobileShell />;
+
+  if (!isMapAvailable) {
     return (
-      <div className="relative w-screen h-screen overflow-hidden bg-[#111113] text-white font-sans flex flex-col">
-        {quotaBanner}
-        <div className="relative flex-1 flex items-center justify-center bg-[#1a1a1c]">
-          <div className="rounded-[20px] bg-white/[0.08] border border-white/10 backdrop-blur-xl shadow-2xl px-6 py-5 text-center max-w-sm mx-4">
-            <div className="text-sm font-semibold text-white">
-              {!isConfigReady ? 'Initializing Google Maps...' : 'Google Maps API Key Unavailable'}
+      <MotionConfig reducedMotion="user">
+      <AppDataProvider value={appData}>
+      <RadarDataProvider value={radarData}>
+        <div className="relative w-full h-dvh overflow-hidden bg-[#111113] text-white font-sans flex flex-col">
+          {quotaBanner}
+          <div className="relative flex-1 flex items-start lg:items-center justify-center bg-[#1a1a1c] pt-[calc(env(safe-area-inset-top)+24px)] lg:pt-0">
+            <div className="rounded-[20px] bg-white/[0.08] border border-white/10 backdrop-blur-xl shadow-2xl px-6 py-5 text-center max-w-sm mx-4">
+              <div className="text-sm font-semibold text-white">
+                {!isConfigReady ? 'Initializing Google Maps...' : 'Google Maps API Key Unavailable'}
+              </div>
+              <p className="text-xs text-white/65 mt-1.5 leading-relaxed">
+                {!isConfigReady
+                  ? 'Loading map configuration and North Queensland weather layers.'
+                  : 'Google Maps canvas is paused until VITE_GOOGLE_MAPS_API_KEY is available. Multi-Model forecasts and emergency feeds remain active.'}
+              </p>
             </div>
-            <p className="text-xs text-white/65 mt-1.5 leading-relaxed">
-              {!isConfigReady
-                ? 'Loading map configuration and North Queensland weather layers.'
-                : 'Google Maps canvas is paused until VITE_GOOGLE_MAPS_API_KEY is available. Multi-Model forecasts and emergency feeds remain active.'}
-            </p>
+            {shellEl}
           </div>
-          {sidebarEl}
         </div>
-      </div>
+      </RadarDataProvider>
+      </AppDataProvider>
+      </MotionConfig>
     );
   }
 
@@ -476,41 +630,19 @@ export function App() {
       apiKey={mapsApiKey}
       libraries={['places', 'maps', 'marker']}
     >
-      <div className="relative w-screen h-screen overflow-hidden bg-[#111113] text-white font-sans flex flex-col">
-        {quotaBanner}
-        <div className="relative flex-1 overflow-hidden">
-          <WeatherMap
-            selectedLocation={selectedLocation}
-            savedLocations={savedLocations}
-            weatherBundle={weatherBundle}
-            multiModelBundle={multiModelBundle}
-            unitSystem={unitSystem}
-            onSelectLocation={handleSelectLocation}
-            rainViewerHost={rainViewerData?.host}
-            rainViewerFrames={rainViewerData?.frames || []}
-            activeFrameIndex={activeFrameIndex}
-            onChangeFrameIndex={(idx) => {
-              setIsRadarPlaying(false);
-              setActiveFrameIndex(idx);
-            }}
-            isRadarPlaying={isRadarPlaying}
-            onToggleRadarPlay={() => setIsRadarPlaying((p) => !p)}
-            radarOpacity={radarOpacity}
-            onChangeRadarOpacity={setRadarOpacity}
-            radarVisible={radarVisible}
-            onToggleRadarVisible={() => setRadarVisible((v) => !v)}
-            onTriggerRefresh={handleRefreshAll}
-            isSidebarCollapsed={isCollapsed}
-            emergencyDashboardEnabled={emergencyDashboardEnabled}
-            emergencyItems={emergencyBundle?.items || []}
-            emergencyLayers={emergencyLayers}
-            selectedEmergencyItem={selectedEmergencyItem}
-            onSelectEmergencyItem={setSelectedEmergencyItem}
-          />
-
-          {sidebarEl}
+      <MotionConfig reducedMotion="user">
+      <AppDataProvider value={appData}>
+      <RadarDataProvider value={radarData}>
+        <div className="relative w-full h-dvh overflow-hidden bg-[#111113] text-white font-sans flex flex-col">
+          {quotaBanner}
+          <div className="relative flex-1 overflow-hidden">
+            <WeatherMap />
+            {shellEl}
+          </div>
         </div>
-      </div>
+      </RadarDataProvider>
+      </AppDataProvider>
+      </MotionConfig>
     </APIProvider>
   );
 }

@@ -23,17 +23,15 @@ import {
   EmergencyBundle,
   EmergencyCategory,
   EmergencyFeatureItem,
-  EmergencyLayerToggles,
 } from '../types/weather';
 import { DEFAULT_EMERGENCY_PROXY } from '../services/emergencyApi';
+import { IosSwitch } from './panels/ModeToggles';
 
 interface EmergencyDrawerProps {
   isEnabled: boolean;
   onToggleEnabled: () => void;
   bundle: EmergencyBundle | null;
   isLoading: boolean;
-  layerToggles: EmergencyLayerToggles;
-  onToggleLayer: (key: keyof EmergencyLayerToggles) => void;
   proxyUrl: string;
   onChangeProxyUrl: (url: string) => void;
   onRefresh: () => void;
@@ -47,8 +45,6 @@ export function EmergencyDrawer({
   onToggleEnabled,
   bundle,
   isLoading,
-  layerToggles,
-  onToggleLayer,
   proxyUrl,
   onChangeProxyUrl,
   onRefresh,
@@ -166,26 +162,17 @@ export function EmergencyDrawer({
         </div>
 
         <div className="flex items-center gap-1.5">
-          <button
-            type="button"
-            role="switch"
-            aria-checked={isEnabled}
-            onClick={onToggleEnabled}
-            className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors cursor-pointer ${
-              isEnabled ? 'bg-[#ff9500]' : 'bg-white/20 hover:bg-white/30'
-            }`}
+          <IosSwitch
+            id="btn-emergency-drawer-toggle"
+            checked={isEnabled}
+            onToggle={onToggleEnabled}
+            activeClass="bg-[#ff9500]"
             title={isEnabled ? 'Turn Emergency Dashboard OFF' : 'Turn Emergency Dashboard ON'}
-          >
-            <span
-              className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${
-                isEnabled ? 'translate-x-4.5' : 'translate-x-0.5'
-              }`}
-            />
-          </button>
+          />
           <button
             type="button"
             onClick={() => setShowSettings((s) => !s)}
-            className={`p-1.5 rounded-lg border text-xs transition-colors cursor-pointer ${
+            className={`w-11 h-11 lg:w-auto lg:h-auto lg:p-1.5 flex items-center justify-center rounded-lg border text-xs transition-colors cursor-pointer ${
               showSettings
                 ? 'bg-[#32ADE6]/25 border-[#32ADE6]/50 text-[#32ADE6]'
                 : 'bg-white/10 border-white/10 text-white/75 hover:bg-white/15'
@@ -199,7 +186,7 @@ export function EmergencyDrawer({
               type="button"
               onClick={onRefresh}
               disabled={isLoading}
-              className="p-1.5 rounded-lg bg-white/10 border border-white/10 text-white/80 hover:bg-white/15 transition-colors cursor-pointer"
+              className="w-11 h-11 lg:w-auto lg:h-auto lg:p-1.5 flex items-center justify-center rounded-lg bg-white/10 border border-white/10 text-white/80 hover:bg-white/15 transition-colors cursor-pointer"
               title="Refresh Emergency Feeds"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-[#32ADE6]' : ''}`} />
@@ -222,7 +209,7 @@ export function EmergencyDrawer({
           <button
             type="button"
             onClick={onToggleEnabled}
-            className="px-4 py-2 rounded-xl bg-[#ff9500] hover:bg-amber-500 text-white text-xs font-semibold transition-colors cursor-pointer"
+            className="min-h-11 lg:min-h-0 px-4 py-2 rounded-xl bg-[#ff9500] hover:bg-amber-500 text-white text-xs font-semibold transition-colors cursor-pointer"
           >
             Turn ON Emergency Dashboard
           </button>
@@ -271,41 +258,6 @@ export function EmergencyDrawer({
 
       {isEnabled && (
         <>
-          {/* Map Layer Toggles */}
-          <div className="ios-bento-card p-3.5 space-y-2">
-            <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-white/50">
-              Map Overlays
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {(
-                [
-                  { key: 'corridor', label: 'Bruce Hwy Corridor' },
-                  { key: 'roads', label: 'Road Closures' },
-                  { key: 'outages', label: 'Ergon Outages' },
-                  { key: 'warnings', label: 'Warnings & Cyclone' },
-                  { key: 'qfd', label: 'QFD Incidents' },
-                  { key: 'support', label: 'Fuel & Evac' },
-                ] as Array<{ key: keyof EmergencyLayerToggles; label: string }>
-              ).map(({ key, label }) => {
-                const active = layerToggles[key];
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => onToggleLayer(key)}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
-                      active
-                        ? 'bg-[#32ADE6] border-[#32ADE6] text-white'
-                        : 'bg-white/[0.06] border-white/10 text-white/60 hover:text-white'
-                    }`}
-                  >
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
           {/* Search */}
           <div className="relative">
             <Search className="w-3.5 h-3.5 text-white/45 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -314,7 +266,7 @@ export function EmergencyDrawer({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Filter Bruce Hwy, Ayr, Giru, Home Hill, Townsville..."
-              className="w-full pl-8 pr-3 py-2 rounded-xl bg-white/10 border border-white/10 text-xs text-white placeholder:text-white/45 focus:outline-none focus:border-[#32ADE6]"
+              className="w-full pl-8 pr-3 py-2.5 lg:py-2 rounded-xl bg-white/10 border border-white/10 text-base lg:text-xs text-white placeholder:text-white/45 focus:outline-none focus:border-[#32ADE6]"
             />
           </div>
 
@@ -335,7 +287,7 @@ export function EmergencyDrawer({
                 key={tab.id}
                 type="button"
                 onClick={() => setFilter(tab.id)}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-medium whitespace-nowrap shrink-0 border transition-colors cursor-pointer tabular-nums ${
+                className={`min-h-11 lg:min-h-0 px-3 lg:px-2.5 py-1 rounded-lg text-xs lg:text-[11px] font-medium whitespace-nowrap shrink-0 border transition-colors cursor-pointer tabular-nums ${
                   filter === tab.id
                     ? 'bg-white text-[#111113] border-white font-semibold'
                     : 'bg-white/[0.07] border-white/10 text-white/70 hover:text-white'
@@ -414,8 +366,9 @@ export function EmergencyDrawer({
                         <button
                           type="button"
                           onClick={() => onFocusItem(item)}
-                          className="p-1.5 rounded-lg bg-white/10 hover:bg-[#32ADE6]/25 text-white/75 hover:text-[#32ADE6] shrink-0 cursor-pointer transition-colors"
+                          className="w-11 h-11 lg:w-auto lg:h-auto lg:p-1.5 flex items-center justify-center rounded-lg bg-white/10 hover:bg-[#32ADE6]/25 text-white/75 hover:text-[#32ADE6] shrink-0 cursor-pointer transition-colors"
                           title="Center map on event"
+                          aria-label="Center map on event"
                         >
                           <MapPin className="w-3.5 h-3.5" />
                         </button>
@@ -432,7 +385,7 @@ export function EmergencyDrawer({
             <button
               type="button"
               onClick={() => setShowFeedStatus((v) => !v)}
-              className="w-full px-3.5 py-2.5 flex items-center justify-between text-[11px] font-medium text-white/75 hover:text-white cursor-pointer"
+              className="w-full min-h-11 lg:min-h-0 px-3.5 py-2.5 flex items-center justify-between text-[11px] font-medium text-white/75 hover:text-white cursor-pointer"
             >
               <span>
                 Feed Health ({feedStatuses.length - blockedCount}/{feedStatuses.length} reachable

@@ -16,7 +16,12 @@ interface PlaceAutocompleteNewProps {
   autoFocus?: boolean;
   onFocusChange?: (focused: boolean) => void;
   alignDropdown?: 'left' | 'right' | 'auto';
+  /** Change this value (non-zero) to move keyboard focus into the search input. */
+  focusToken?: number;
 }
+
+// Focus requests are one-shot: a remount (e.g. switching tabs) must not re-focus and pop the keyboard.
+let lastConsumedFocusToken = 0;
 
 /**
  * Places UI Kit Basic Autocomplete Component
@@ -29,10 +34,30 @@ export function PlaceAutocompleteNew({
   placeholder = 'Search location...',
   className = '',
   onFocusChange,
+  focusToken = 0,
 }: PlaceAutocompleteNewProps) {
   const placesLib = useMapsLibrary('places');
   const containerRef = useRef<HTMLDivElement>(null);
+  const elementRef = useRef<HTMLElement | null>(null);
   const [isReady, setIsReady] = useState(false);
+  // Keep latest callbacks in refs so inline handlers don't recreate the widget on every render.
+  const onSelectRef = useRef(onSelectLocation);
+  const onFocusChangeRef = useRef(onFocusChange);
+  onSelectRef.current = onSelectLocation;
+  onFocusChangeRef.current = onFocusChange;
+
+  useEffect(() => {
+    if (!focusToken || !isReady || focusToken <= lastConsumedFocusToken) return;
+    // Wait for any sheet/sidebar transition to start so the input is on screen.
+    const id = window.setTimeout(() => {
+      const el = elementRef.current;
+      if (!el) return;
+      lastConsumedFocusToken = focusToken;
+      const inner = el.shadowRoot?.querySelector('input') as HTMLInputElement | null;
+      (inner ?? el).focus();
+    }, 120);
+    return () => window.clearTimeout(id);
+  }, [focusToken, isReady]);
 
   useEffect(() => {
     if (!placesLib || !containerRef.current) return;
@@ -80,14 +105,14 @@ export function PlaceAutocompleteNew({
 
         if (lat !== undefined && lng !== undefined) {
           const name = place.displayName || place.formattedAddress || 'Selected Location';
-          onSelectLocation({
+          onSelectRef.current({
             id: `place-${place.id || Date.now()}`,
             name: typeof name === 'string' ? name : String(name),
             country: '',
             lat: Number(lat),
             lng: Number(lng),
           });
-          onFocusChange?.(false);
+          onFocusChangeRef.current?.(false);
         }
       } catch (err) {
         console.error('Error in Places UI Kit Autocomplete selection:', err);
@@ -98,8 +123,8 @@ export function PlaceAutocompleteNew({
       console.warn('Places UI Kit Autocomplete error event:', err);
     };
 
-    const handleFocusIn = () => onFocusChange?.(true);
-    const handleFocusOut = () => onFocusChange?.(false);
+    const handleFocusIn = () => onFocusChangeRef.current?.(true);
+    const handleFocusOut = () => onFocusChangeRef.current?.(false);
 
     autocomplete.addEventListener('gmp-select', handleSelect);
     autocomplete.addEventListener('gmp-error', handleError);
@@ -108,6 +133,7 @@ export function PlaceAutocompleteNew({
 
     containerRef.current.innerHTML = '';
     containerRef.current.appendChild(autocomplete);
+    elementRef.current = autocomplete;
     setIsReady(true);
 
     return () => {
@@ -115,11 +141,12 @@ export function PlaceAutocompleteNew({
       autocomplete.removeEventListener('gmp-error', handleError);
       autocomplete.removeEventListener('focusin', handleFocusIn);
       autocomplete.removeEventListener('focusout', handleFocusOut);
+      if (elementRef.current === autocomplete) elementRef.current = null;
       if (autocomplete.parentNode) {
         autocomplete.parentNode.removeChild(autocomplete);
       }
     };
-  }, [placesLib, onSelectLocation, onFocusChange, placeholder]);
+  }, [placesLib, placeholder]);
 
   return (
     <div className={`places-ui-kit-wrapper relative w-full ${className}`}>

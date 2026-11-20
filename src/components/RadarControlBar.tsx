@@ -4,193 +4,203 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Play, Pause, RotateCw, Eye, EyeOff, Sliders, Radio } from 'lucide-react';
-import { RainViewerFrame } from '../types/weather';
+import { useEffect, useState } from 'react';
+import { Pause, Play } from 'lucide-react';
+import type { RainViewerFrame } from '../types/weather';
+import { useAppData, useRadarData } from '../state/AppDataContext';
 
-interface RadarControlBarProps {
-  frames: RainViewerFrame[];
-  activeFrameIndex: number;
-  onChangeFrameIndex: (idx: number) => void;
-  isPlaying: boolean;
-  onTogglePlay: () => void;
-  opacity: number;
-  onChangeOpacity: (val: number) => void;
-  visible: boolean;
-  onToggleVisible: () => void;
-  onRefresh: () => void;
-  onJumpRegion: (region: 'CORRIDOR' | 'NQ') => void;
-  isSidebarCollapsed?: boolean;
-}
+const THUMB_PX = 24;
 
-function formatBrisbaneTimestamp(unixSec?: number): string {
-  if (!unixSec) return 'Syncing radar...';
+const LEGEND = [
+  { color: '#88ddee', label: 'Drizzle' },
+  { color: '#00cc66', label: 'Light' },
+  { color: '#ffff00', label: 'Moderate' },
+  { color: '#ff7e00', label: 'Heavy' },
+  { color: '#ff0000', label: 'Intense' },
+  { color: '#b30077', label: 'Severe / hail' },
+];
+
+function formatBrisbaneTime(unixSec: number): string {
   try {
-    return (
-      new Intl.DateTimeFormat('en-AU', {
-        timeZone: 'Australia/Brisbane',
-        day: '2-digit',
-        month: 'short',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false,
-      }).format(new Date(unixSec * 1000)) + ' AEST'
-    );
+    return new Intl.DateTimeFormat('en-AU', {
+      timeZone: 'Australia/Brisbane',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).format(new Date(unixSec * 1000));
   } catch {
-    return new Date(unixSec * 1000).toISOString();
+    return new Date(unixSec * 1000).toISOString().slice(11, 16);
   }
 }
 
-export function RadarControlBar({
-  frames,
-  activeFrameIndex,
-  onChangeFrameIndex,
-  isPlaying,
-  onTogglePlay,
-  opacity,
-  onChangeOpacity,
-  visible,
-  onToggleVisible,
-  onRefresh,
-  onJumpRegion,
-  isSidebarCollapsed = true,
-}: RadarControlBarProps) {
-  const activeFrame = frames[activeFrameIndex] || null;
+/** "14:20 · −20 min" for observed frames, "14:40 · +10 min forecast" for nowcast frames. */
+function describeFrame(frame: RainViewerFrame | null, nowMs: number) {
+  if (!frame) return { text: 'Syncing radar…', isForecast: false };
+  const time = formatBrisbaneTime(frame.time);
+  const diffMin = Math.round((frame.time * 1000 - nowMs) / 60000);
+  if (frame.kind === 'nowcast') {
+    return { text: `${time} · +${Math.max(0, diffMin)} min forecast`, isForecast: true };
+  }
+  const rel = Math.abs(diffMin) < 1 ? 'now' : `−${Math.abs(diffMin)} min`;
+  return { text: `${time} · ${rel}`, isForecast: false };
+}
+
+/** Thumb-friendly radar timeline pill (play, scrubber with frame ticks, relative time, speed). */
+export function RadarControlBar() {
+  const {
+    rainViewerData,
+    activeFrameIndex,
+    onChangeFrameIndex,
+    isRadarPlaying,
+    onToggleRadarPlay,
+    radarSpeed,
+    onToggleRadarSpeed,
+    radarVisible,
+  } = useRadarData();
+  const { isDesktop, isSidebarCollapsed, sheetSnap } = useAppData();
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  const [showLegend, setShowLegend] = useState(false);
+
+  useEffect(() => {
+    const id = window.setInterval(() => setNowMs(Date.now()), 30_000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  // Radar overlay off: no point showing the timeline (turn it back on from the Layers menu).
+  if (!radarVisible) return null;
+
+  const frames = rainViewerData?.frames ?? [];
+  const lastIdx = Math.max(0, frames.length - 1);
+  const idx = Math.min(activeFrameIndex, lastIdx);
+  const activeFrame = frames[idx] ?? null;
   const pastCount = frames.filter((f) => f.kind === 'past').length;
+  const { text, isForecast } = describeFrame(activeFrame, nowMs);
+  const hidden = !isDesktop && sheetSnap === 'full';
+
+  // Fraction of the track where forecast frames begin (between the last past and first nowcast frame).
+  const forecastStart =
+    frames.length > 1 && pastCount < frames.length ? Math.max(0, (pastCount - 0.5) / lastIdx) : 1;
+  const trackPos = (f: number) => `calc(${THUMB_PX / 2}px + (100% - ${THUMB_PX}px) * ${f})`;
+
+  const positionClass = isDesktop
+    ? `bottom-5 ${isSidebarCollapsed ? 'left-0 w-full' : 'left-[432px] w-[calc(100vw-432px)]'}`
+    : 'left-0 w-full follows-sheet';
 
   return (
     <div
-      className={`fixed bottom-5 z-20 pointer-events-none flex justify-center px-3 transition-all duration-300 ${
-        isSidebarCollapsed
-          ? 'left-0 w-full'
-          : 'left-0 lg:left-[432px] w-full lg:w-[calc(100vw-432px)]'
+      className={`fixed z-20 pointer-events-none flex justify-center px-3 transition-[opacity,transform,bottom,left,width] duration-300 ${positionClass} ${
+        hidden ? 'opacity-0 translate-y-4' : 'opacity-100'
       }`}
+      style={isDesktop ? undefined : { bottom: 'calc(var(--sheet-h, 200px) + 8px)' }}
+      aria-hidden={hidden}
+      inert={hidden}
     >
-      <div className="w-full max-w-[660px] pointer-events-auto">
-        <div className="rounded-[28px] bg-[#141416]/85 border border-white/10 px-5 py-3 shadow-2xl shadow-black/60 backdrop-blur-2xl flex flex-col gap-2 text-white">
-          {/* Primary Timeline Row */}
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex-1 min-w-[220px] flex items-center gap-3">
-              <button
-                type="button"
-                onClick={onTogglePlay}
-                disabled={frames.length === 0}
-                className="w-9 h-9 rounded-full bg-[#32ADE6] hover:bg-[#4cbdf0] disabled:bg-white/15 text-white flex items-center justify-center transition-colors shrink-0 cursor-pointer"
-                title={isPlaying ? 'Pause Radar Loop' : 'Play Radar Loop'}
-                aria-label={isPlaying ? 'Pause Radar Loop' : 'Play Radar Loop'}
-              >
-                {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
-              </button>
+      <div
+        className={`w-full max-w-[560px] rounded-[24px] bg-[#141416]/85 border border-white/10 pl-2 pr-2 py-2 shadow-2xl shadow-black/60 backdrop-blur-2xl text-white ${
+          hidden ? 'pointer-events-none' : 'pointer-events-auto'
+        }`}
+      >
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onToggleRadarPlay}
+            disabled={frames.length === 0}
+            className="w-11 h-11 rounded-full bg-[#32ADE6] hover:bg-[#4cbdf0] disabled:bg-white/15 text-white flex items-center justify-center transition-colors shrink-0 cursor-pointer"
+            title={isRadarPlaying ? 'Pause radar loop' : 'Play radar loop'}
+            aria-label={isRadarPlaying ? 'Pause radar loop' : 'Play radar loop'}
+          >
+            {isRadarPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-0.5" />}
+          </button>
 
-              <div className="flex-1 flex flex-col gap-1 min-w-0">
-                <input
-                  type="range"
-                  min={0}
-                  max={Math.max(0, frames.length - 1)}
-                  step={1}
-                  value={Math.min(activeFrameIndex, Math.max(0, frames.length - 1))}
-                  onChange={(e) => onChangeFrameIndex(Number.parseInt(e.target.value, 10))}
-                  disabled={frames.length === 0}
-                  className="w-full h-1.5 bg-white/20 rounded-full appearance-none cursor-pointer accent-[#32ADE6]"
-                  aria-label="Radar timeline scrubber"
-                />
-                <div className="flex items-center justify-between text-[11px] font-mono tabular-nums text-white/60">
-                  <span className="truncate font-medium text-white">
-                    {formatBrisbaneTimestamp(activeFrame?.time)}
-                  </span>
-                  <span className="shrink-0 ml-2 text-white/55">
-                    {activeFrame ? (activeFrame.kind === 'nowcast' ? 'Nowcast' : 'Observed') : 'Syncing'} ·{' '}
-                    {frames.length > 0 ? `${activeFrameIndex + 1}/${frames.length}` : '0/0'}
-                    {pastCount > 0 && frames.length > pastCount ? ` (${frames.length - pastCount} fcst)` : ''}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Opacity + Visibility + Refresh */}
-            <div className="flex items-center gap-1.5 shrink-0">
-              <div className="flex items-center gap-1.5 bg-white/[0.08] px-2.5 py-1.5 rounded-xl border border-white/10">
-                <Sliders className="w-3.5 h-3.5 text-white/60" />
-                <input
-                  id="radar-opacity-slider"
-                  type="range"
-                  min="0.1"
-                  max="1.0"
-                  step="0.05"
-                  value={opacity}
-                  onChange={(e) => onChangeOpacity(parseFloat(e.target.value))}
-                  className="w-14 h-1 bg-white/20 rounded-lg appearance-none cursor-pointer accent-[#32ADE6]"
-                  title="Radar Opacity"
-                />
-                <span className="text-[10px] font-mono tabular-nums text-white/80 w-7 text-right">
-                  {Math.round(opacity * 100)}%
-                </span>
-              </div>
-
-              <button
-                id="btn-radar-refresh"
-                type="button"
-                onClick={onRefresh}
-                className="p-2 rounded-xl bg-white/[0.08] border border-white/10 text-white/80 hover:bg-white/15 hover:text-white transition-colors cursor-pointer"
-                title="Refresh Radar & Feeds"
-              >
-                <RotateCw className="w-3.5 h-3.5" />
-              </button>
-
-              <button
-                id="btn-radar-toggle-visibility"
-                type="button"
-                onClick={onToggleVisible}
-                className={`p-2 rounded-xl border transition-colors cursor-pointer ${
-                  visible
-                    ? 'bg-[#32ADE6]/20 border-[#32ADE6]/40 text-[#32ADE6]'
-                    : 'bg-white/[0.08] border-white/10 text-white/40 hover:text-white/80'
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between gap-2 px-1">
+              <span
+                className={`text-xs font-mono font-semibold tabular-nums truncate ${
+                  isForecast ? 'text-[#ff9500]' : 'text-white'
                 }`}
-                title={visible ? 'Hide Radar Overlay' : 'Show Radar Overlay'}
+                aria-live="off"
               >
-                {visible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
-              </button>
-            </div>
-          </div>
-
-          {/* Legend & NQ Focus Row */}
-          <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-white/10 text-[11px]">
-            <div className="flex items-center gap-2">
-              <span className="text-white/65 font-medium flex items-center gap-1">
-                <Radio className="w-3 h-3 text-[#32ADE6]" />
-                Rain
+                {text}
               </span>
-              <div className="flex items-center gap-1.5">
-                <span className="text-[10px] text-white/45">Light</span>
-                <div className="flex h-2 rounded-sm overflow-hidden border border-white/15">
-                  <div className="w-4 bg-[#88ddee]" title="Drizzle" />
-                  <div className="w-4 bg-[#00cc66]" title="Light Rain" />
-                  <div className="w-4 bg-[#ffff00]" title="Moderate" />
-                  <div className="w-4 bg-[#ff7e00]" title="Heavy" />
-                  <div className="w-4 bg-[#ff0000]" title="Intense" />
-                  <div className="w-4 bg-[#b30077]" title="Severe / Hail" />
-                </div>
-                <span className="text-[10px] text-white/45">Severe</span>
-              </div>
+              <button
+                type="button"
+                onClick={() => setShowLegend((v) => !v)}
+                className="flex items-center gap-1 h-8 -my-2 px-1.5 shrink-0 cursor-pointer"
+                aria-expanded={showLegend}
+                aria-label="Rain intensity legend"
+                title="Rain intensity legend"
+              >
+                <span className="flex h-1.5 w-12 rounded-sm overflow-hidden">
+                  {LEGEND.map((l) => (
+                    <span key={l.color} className="flex-1" style={{ backgroundColor: l.color }} />
+                  ))}
+                </span>
+              </button>
             </div>
 
-            <div className="flex items-center gap-1.5 text-[11px]">
-              <button
-                type="button"
-                onClick={() => onJumpRegion('CORRIDOR')}
-                className="px-2.5 py-1 rounded-lg bg-white/[0.08] hover:bg-white/15 text-white/85 font-medium whitespace-nowrap shrink-0 cursor-pointer transition-colors"
-              >
-                Ayr ↔ Townsville
-              </button>
-              <button
-                type="button"
-                onClick={() => onJumpRegion('NQ')}
-                className="px-2.5 py-1 rounded-lg bg-white/[0.08] hover:bg-white/15 text-white/85 font-medium whitespace-nowrap shrink-0 cursor-pointer transition-colors"
-              >
-                North QLD
-              </button>
+            {/* Scrubber: decorative track + ticks behind a transparent native range input. */}
+            <div className="relative h-9">
+              <div
+                className="absolute top-1/2 -translate-y-1/2 h-1.5 rounded-full"
+                style={{
+                  left: THUMB_PX / 2,
+                  right: THUMB_PX / 2,
+                  background: `linear-gradient(to right, rgba(50,173,230,0.55) 0%, rgba(50,173,230,0.55) ${
+                    forecastStart * 100
+                  }%, rgba(255,149,0,0.55) ${forecastStart * 100}%, rgba(255,149,0,0.55) 100%)`,
+                }}
+              />
+              {frames.length > 1 &&
+                frames.map((f, i) => (
+                  <span
+                    key={f.time}
+                    className={`absolute top-1/2 w-0.5 rounded-full -translate-x-1/2 ${
+                      f.kind === 'nowcast' ? 'bg-[#ff9500] h-2.5 -translate-y-1/2' : 'bg-white/60 h-3 -translate-y-1/2'
+                    }`}
+                    style={{ left: trackPos(i / lastIdx) }}
+                  />
+                ))}
+              <input
+                type="range"
+                min={0}
+                max={lastIdx}
+                step={1}
+                value={idx}
+                onChange={(e) => onChangeFrameIndex(Number.parseInt(e.target.value, 10))}
+                disabled={frames.length === 0}
+                className={`radar-scrubber absolute inset-0 w-full h-full ${isForecast ? 'is-forecast' : ''}`}
+                aria-label="Radar timeline"
+                aria-valuetext={text}
+              />
             </div>
           </div>
+
+          <button
+            type="button"
+            onClick={onToggleRadarSpeed}
+            className={`w-11 h-11 rounded-full text-xs font-bold font-mono tabular-nums shrink-0 cursor-pointer transition-colors ${
+              radarSpeed === 2 ? 'bg-white/20 text-white' : 'bg-white/[0.08] text-white/75 hover:text-white'
+            }`}
+            title="Playback speed"
+            aria-label={`Playback speed ${radarSpeed}x`}
+          >
+            {radarSpeed}×
+          </button>
         </div>
+
+        {showLegend && (
+          <div className="flex items-center gap-2 pt-1.5 px-1 text-[10px] text-white/60 overflow-x-auto no-scrollbar">
+            {LEGEND.map((l) => (
+              <span key={l.color} className="flex items-center gap-1 whitespace-nowrap">
+                <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: l.color }} />
+                {l.label}
+              </span>
+            ))}
+            <span className="ml-auto flex items-center gap-1 whitespace-nowrap">
+              <span className="w-2.5 h-0.5 bg-[#ff9500]" /> forecast
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );

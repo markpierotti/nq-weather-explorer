@@ -6,77 +6,50 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Map, useMap, useMapsLibrary } from '@vis.gl/react-google-maps';
-import {
-  EmergencyFeatureItem,
-  EmergencyLayerToggles,
-  LocationWeatherBundle,
-  MultiModelBundle,
-  RainViewerFrame,
-  WeatherLocation,
-  WeatherUnitSystem,
-} from '../types/weather';
+import { useAppData, useRadarData } from '../state/AppDataContext';
 import { searchPlaceByCoordinates } from '../services/weatherApi';
 import { WeatherTileOverlay } from './WeatherTileOverlay';
 import { WeatherMarkers } from './WeatherMarkers';
 import { EmergencyMapLayers } from './EmergencyMapLayers';
 import { RadarControlBar } from './RadarControlBar';
 import { MapFloatingControls } from './MapFloatingControls';
+import { LayersMenu, type MapStyle, type QuickView } from './LayersMenu';
 import { panToWithVerticalOffset } from '../utils/mapUtils';
 
-interface WeatherMapProps {
-  selectedLocation: WeatherLocation;
-  savedLocations?: WeatherLocation[];
-  weatherBundle: LocationWeatherBundle | null;
-  multiModelBundle: MultiModelBundle | null;
-  unitSystem: WeatherUnitSystem;
-  onSelectLocation: (loc: WeatherLocation) => void;
-  rainViewerHost?: string;
-  rainViewerFrames: RainViewerFrame[];
-  activeFrameIndex: number;
-  onChangeFrameIndex: (idx: number) => void;
-  isRadarPlaying: boolean;
-  onToggleRadarPlay: () => void;
-  radarOpacity: number;
-  onChangeRadarOpacity: (opacity: number) => void;
-  radarVisible: boolean;
-  onToggleRadarVisible: () => void;
-  onTriggerRefresh: () => void;
-  isSidebarCollapsed?: boolean;
-  emergencyDashboardEnabled: boolean;
-  emergencyItems: EmergencyFeatureItem[];
-  emergencyLayers: EmergencyLayerToggles;
-  selectedEmergencyItem: EmergencyFeatureItem | null;
-  onSelectEmergencyItem: (item: EmergencyFeatureItem | null) => void;
+/** Radar tiles subscribe to radar state on their own, so playback doesn't re-render markers/layers. */
+function RadarTileLayer() {
+  const { rainViewerData, activeFrameIndex, radarOpacity, radarVisible } = useRadarData();
+  return (
+    <WeatherTileOverlay
+      rainViewerHost={rainViewerData?.host}
+      rainViewerFrame={rainViewerData?.frames[activeFrameIndex] ?? null}
+      opacity={radarOpacity}
+      visible={radarVisible}
+    />
+  );
 }
 
-function MapContent({
-  selectedLocation,
-  savedLocations = [],
-  weatherBundle,
-  multiModelBundle,
-  unitSystem,
-  onSelectLocation,
-  rainViewerHost,
-  rainViewerFrames,
-  activeFrameIndex,
-  onChangeFrameIndex,
-  isRadarPlaying,
-  onToggleRadarPlay,
-  radarOpacity,
-  onChangeRadarOpacity,
-  radarVisible,
-  onToggleRadarVisible,
-  onTriggerRefresh,
-  isSidebarCollapsed = false,
-  emergencyDashboardEnabled,
-  emergencyItems,
-  emergencyLayers,
-  selectedEmergencyItem,
-  onSelectEmergencyItem,
-}: WeatherMapProps) {
+function MapContent() {
+  const {
+    selectedLocation,
+    savedLocations,
+    weatherBundle,
+    multiModelBundle,
+    unitSystem,
+    onSelectLocation,
+    onRefreshAll,
+    emergencyDashboardEnabled,
+    emergencyBundle,
+    emergencyLayers,
+    selectedEmergencyItem,
+    onSelectEmergencyItem,
+    isDesktop,
+    onChangeSheetSnap,
+    onSetLayersMenuOpen,
+  } = useAppData();
   const map = useMap();
   const placesLib = useMapsLibrary('places');
-  const [mapTypeId, setMapTypeId] = useState<'roadmap' | 'satellite' | 'hybrid' | 'terrain'>('roadmap');
+  const [mapTypeId, setMapTypeId] = useState<MapStyle>('roadmap');
   const [isLocating, setIsLocating] = useState(false);
 
   const lastPannedCoord = useRef<{ lat: number; lng: number } | null>(null);
@@ -102,12 +75,17 @@ function MapContent({
     if (lastFocusedEmergencyId.current === selectedEmergencyItem.id) return;
     if (selectedEmergencyItem.lat !== null && selectedEmergencyItem.lng !== null) {
       lastFocusedEmergencyId.current = selectedEmergencyItem.id;
-      map.panTo({ lat: selectedEmergencyItem.lat, lng: selectedEmergencyItem.lng });
       if ((map.getZoom() || 9) < 10) {
         map.setZoom(11);
       }
+      if (isDesktop) {
+        map.panTo({ lat: selectedEmergencyItem.lat, lng: selectedEmergencyItem.lng });
+      } else {
+        // Mobile: keep the item above the bottom sheet.
+        panToWithVerticalOffset(map, selectedEmergencyItem.lat, selectedEmergencyItem.lng);
+      }
     }
-  }, [map, selectedEmergencyItem]);
+  }, [map, selectedEmergencyItem, isDesktop]);
 
   // Click anywhere on map to resolve place name & update weather/models
   useEffect(() => {
@@ -143,8 +121,12 @@ function MapContent({
     };
   }, [map, placesLib, onSelectLocation]);
 
-  const handleJumpRegion = (region: 'CORRIDOR' | 'NQ') => {
+  const handleQuickView = (region: QuickView) => {
     if (!map) return;
+    if (!isDesktop) {
+      onSetLayersMenuOpen(false);
+      onChangeSheetSnap('peek');
+    }
     if (region === 'CORRIDOR') {
       map.setCenter({ lat: -19.42, lng: 147.11 });
       map.setZoom(10);
@@ -182,20 +164,13 @@ function MapContent({
     );
   };
 
-  const activeFrame = rainViewerFrames[activeFrameIndex] || null;
-
   return (
     <>
-      <WeatherTileOverlay
-        rainViewerHost={rainViewerHost}
-        rainViewerFrame={activeFrame}
-        opacity={radarOpacity}
-        visible={radarVisible}
-      />
+      <RadarTileLayer />
 
       {emergencyDashboardEnabled && (
         <EmergencyMapLayers
-          items={emergencyItems}
+          items={emergencyBundle?.items ?? []}
           layerToggles={emergencyLayers}
           selectedItem={selectedEmergencyItem}
           onSelectItem={onSelectEmergencyItem}
@@ -210,40 +185,28 @@ function MapContent({
         unitSystem={unitSystem}
         onSelectLocation={onSelectLocation}
         showStations={true}
-        onRefreshWeather={onTriggerRefresh}
+        onRefreshWeather={onRefreshAll}
       />
 
-      <MapFloatingControls
+      <MapFloatingControls onLocateUser={handleLocateUser} isLocating={isLocating} />
+
+      <LayersMenu
         mapTypeId={mapTypeId}
         onChangeMapType={(type) => {
           setMapTypeId(type);
           if (map) map.setMapTypeId(type);
         }}
-        onLocateUser={handleLocateUser}
-        isLocating={isLocating}
+        onQuickView={handleQuickView}
       />
 
-      <RadarControlBar
-        frames={rainViewerFrames}
-        activeFrameIndex={activeFrameIndex}
-        onChangeFrameIndex={onChangeFrameIndex}
-        isPlaying={isRadarPlaying}
-        onTogglePlay={onToggleRadarPlay}
-        opacity={radarOpacity}
-        onChangeOpacity={onChangeRadarOpacity}
-        visible={radarVisible}
-        onToggleVisible={onToggleRadarVisible}
-        onRefresh={onTriggerRefresh}
-        onJumpRegion={handleJumpRegion}
-        isSidebarCollapsed={isSidebarCollapsed}
-      />
+      <RadarControlBar />
     </>
   );
 }
 
-export function WeatherMap(props: WeatherMapProps) {
+export function WeatherMap() {
   return (
-    <div className="relative w-full h-full min-h-[100vh] bg-[#1a1a1c] overflow-hidden">
+    <div className="relative w-full h-full bg-[#1a1a1c] overflow-hidden">
       <Map
         id="google-weather-map-instance"
         mapId="DEMO_MAP_ID"
@@ -257,7 +220,7 @@ export function WeatherMap(props: WeatherMapProps) {
         gestureHandling="greedy"
         className="w-full h-full"
       >
-        <MapContent {...props} />
+        <MapContent />
       </Map>
     </div>
   );

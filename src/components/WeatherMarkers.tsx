@@ -10,6 +10,8 @@ import { CloudRain } from 'lucide-react';
 import { LocationWeatherBundle, MultiModelBundle, WeatherLocation, WeatherUnitSystem } from '../types/weather';
 import { PRESET_LOCATIONS } from '../utils/mockWeatherData';
 import { panToWithVerticalOffset } from '../utils/mapUtils';
+import { useIsDesktop } from '../hooks/useIsDesktop';
+import { useAppData } from '../state/AppDataContext';
 
 interface WeatherMarkersProps {
   selectedLocation: WeatherLocation;
@@ -34,13 +36,9 @@ export function WeatherMarkers({
 }: WeatherMarkersProps) {
   const map = useMap();
   const [showInfoWindow, setShowInfoWindow] = useState(true);
-  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 640);
-
-  useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 640);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  // Below 1024px the bottom sheet already shows this summary, so skip the InfoWindow clutter.
+  const isMobile = !useIsDesktop();
+  const { onChangeSheetSnap } = useAppData();
 
   useEffect(() => {
     setShowInfoWindow(true);
@@ -93,6 +91,11 @@ export function WeatherMarkers({
         title={`${selectedLocation.name}${displayTemp !== undefined ? ` ${displayTemp}°` : ''}`}
         zIndex={100}
         onClick={() => {
+          if (isMobile) {
+            // Mobile: the sheet is the "info window".
+            onChangeSheetSnap('half');
+            return;
+          }
           setShowInfoWindow((prev) => {
             const next = !prev;
             if (next && map) {

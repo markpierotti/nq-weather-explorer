@@ -35,7 +35,8 @@ export function WeatherTileOverlay({
 
     const removeCurrentLayer = () => {
       if (overlayRef.current) {
-        const index = map.overlayMapTypes.getArray().indexOf(overlayRef.current);
+        // getArray() can be undefined if the Maps API failed (e.g. invalid key); don't crash the app tree.
+        const index = map.overlayMapTypes?.getArray?.()?.indexOf(overlayRef.current) ?? -1;
         if (index !== -1) {
           map.overlayMapTypes.removeAt(index);
         }

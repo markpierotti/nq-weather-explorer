@@ -578,6 +578,8 @@ export interface CorridorBriefingResponse {
   usedSearchGrounding: boolean;
   generatedAt: string;
   model: string;
+  feedHealth?: BriefingFeedHealth[];
+  grounding?: BriefingGroundingReport;
 }
 
 // ---------------------------------------------------------------------------
@@ -650,6 +652,24 @@ export interface GeminiCycloneSynthesis {
 // Briefing follow-up chat (POST /api/briefing/chat, Server-Sent Events)
 // ---------------------------------------------------------------------------
 
+export interface BriefingFeedHealth {
+  feed: 'traffic' | 'bom-warnings' | 'gauges';
+  status: 'live' | 'stale' | 'error';
+  count: number;
+  fetchedAt: string;
+  error?: string;
+}
+
+export interface BriefingGroundingReport {
+  enabled: boolean;
+  checked: boolean;
+  passed: boolean;
+  supportScore: number | null;
+  threshold: number;
+  ungroundedClaims: string[];
+  error?: string;
+}
+
 export interface BriefingChatMessage {
   role: 'user' | 'model';
   text: string;
@@ -670,6 +690,12 @@ export interface BriefingChatRequest {
 export type BriefingChatEvent =
   | { type: 'chunk'; text: string }
   | { type: 'citations'; citations: GroundingCitation[] }
+  | {
+      type: 'grounding';
+      grounding: BriefingGroundingReport;
+      feedHealth: BriefingFeedHealth[];
+      intent: string;
+    }
   | { type: 'done' }
   | { type: 'error'; error: string };
 

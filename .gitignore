@@ -14,4 +14,5 @@ data/
 
 # Agent skills installed locally (npx skills add), not part of the app
 .claude/skills/
+.agents/skills/
 skills-lock.json

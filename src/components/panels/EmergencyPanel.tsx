@@ -7,6 +7,7 @@
 import { Layers } from 'lucide-react';
 import { useAppData } from '../../state/AppDataContext';
 import { EmergencyDrawer } from '../EmergencyDrawer';
+import { CorridorAlerts } from '../CorridorAlerts';
 
 /** "Emergency" tab: feed list + filters. Map overlay toggles live in the Layers menu. */
 export function EmergencyPanel() {
@@ -24,6 +25,7 @@ export function EmergencyPanel() {
           <span className="text-[#32ADE6] font-semibold shrink-0">Layers →</span>
         </button>
       )}
+      <CorridorAlerts />
       <EmergencyDrawer
         isEnabled={d.emergencyDashboardEnabled}
         onToggleEnabled={d.onToggleEmergencyDashboard}

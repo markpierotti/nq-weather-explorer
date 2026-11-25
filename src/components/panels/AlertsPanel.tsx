@@ -4,28 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { BellRing, CheckCircle2, MapPin, ShieldAlert } from 'lucide-react';
+import { CheckCircle2, MapPin, ShieldAlert } from 'lucide-react';
 import { isWarningItem, useAppData } from '../../state/AppDataContext';
 import { WeatherAlertBanner } from '../WeatherAlertBanner';
-
-/** Placeholder for Phase 4 (web push notification settings). */
-function PushNotificationsPlaceholder() {
-  return (
-    <div className="rounded-[20px] border border-dashed border-white/20 bg-white/[0.04] p-4 space-y-1.5">
-      <div className="flex items-center gap-2">
-        <BellRing className="w-4 h-4 text-[#32ADE6]" />
-        <span className="text-sm font-semibold text-white">Push notifications</span>
-        <span className="ml-auto text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-white/10 text-white/60">
-          Coming soon
-        </span>
-      </div>
-      <p className="text-xs text-white/60 leading-relaxed">
-        Get a notification on this phone when a BOM warning, road closure or flood alert is issued for your saved
-        locations.
-      </p>
-    </div>
-  );
-}
+import { CorridorAlerts } from '../CorridorAlerts';
 
 /** "Alerts" tab: every active warning in one list + (future) notification settings. */
 export function AlertsPanel() {
@@ -114,8 +96,7 @@ export function AlertsPanel() {
         </div>
       )}
 
-      {/* TODO(Phase 4): replace with real web-push subscription settings. */}
-      <PushNotificationsPlaceholder />
+      <CorridorAlerts />
     </div>
   );
 }

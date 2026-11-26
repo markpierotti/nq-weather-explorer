@@ -34,7 +34,7 @@ function formatBrisbaneTime(unixSec: number): string {
 }
 
 /**
- * "14:20 · −20 min" for observed frames, "14:40 · +10 min forecast" for RainViewer nowcast frames,
+ * "14:20 · −20 min" for observed frames, "14:40 · +10 min forecast" for nowcast frames (radar moved forward),
  * "17:00 · +2 h model forecast" for Open-Meteo model frames (not radar).
  */
 function describeFrame(frame: RainViewerFrame | null, nowMs: number): { text: string; suffix?: string; isForecast: boolean } {
@@ -47,7 +47,10 @@ function describeFrame(frame: RainViewerFrame | null, nowMs: number): { text: st
     return { text: `${time} · ${ahead} model`, suffix: ' forecast', isForecast: true };
   }
   if (frame.kind === 'nowcast') {
-    return { text: `${time} · +${Math.max(0, diffMin)} min forecast`, isForecast: true };
+    // The latest radar frame is ~10 min old, so the first nowcast frames can land at or just before "now".
+    const ahead = diffMin <= 0 ? 'now' : `+${diffMin} min`;
+    // Like model frames, " forecast" is dropped on narrow screens, where the note row below says it.
+    return { text: `${time} · ${ahead}`, suffix: ' forecast', isForecast: true };
   }
   const rel = Math.abs(diffMin) < 1 ? 'now' : `−${Math.abs(diffMin)} min`;
   return { text: `${time} · ${rel}`, isForecast: false };
@@ -85,7 +88,15 @@ export function RadarControlBar() {
   const { text, suffix, isForecast } = describeFrame(activeFrame, nowMs);
   const fullText = text + (suffix ?? '');
   const hasModelFrames = frames.some((f) => f.kind === 'model');
+  const hasForecastFrames = pastCount < frames.length;
   const isModelFrame = activeFrame?.kind === 'model';
+  const isNowcastFrame = activeFrame?.kind === 'nowcast';
+  // Say what the orange frames are: the nowcast is radar moved forward, the model isn't radar at all.
+  const forecastNote = isNowcastFrame
+    ? 'radar moved forward, not observed'
+    : isModelFrame || !frames.some((f) => f.kind === 'nowcast')
+      ? 'model rain forecast, not radar'
+      : 'forecast, not observed radar';
   const hidden = !isDesktop && sheetSnap === 'full';
 
   // Fraction of the track where forecast frames begin (between the last past and first forecast frame).
@@ -214,20 +225,26 @@ export function RadarControlBar() {
           </div>
         )}
 
-        {/* Model frames are not radar: say so, and credit Open-Meteo (CC BY 4.0), whenever they're on the timeline. */}
-        {hasModelFrames && (
+        {/* Forecast frames are not observed radar: say so, and credit Open-Meteo (CC BY 4.0) for the model frames. */}
+        {hasForecastFrames && (
           <div className="flex items-center justify-between gap-2 px-1 pt-0.5 text-[11px] text-white/60">
-            <span className={`truncate transition-colors ${isModelFrame ? 'text-[#ff9500]' : ''}`}>
-              Orange: model rain forecast, not radar
+            <span className={`truncate transition-colors ${isForecast ? 'text-[#ff9500]' : ''}`}>
+              {/* "Orange:" explains the orange ticks; narrow screens drop it to fit (the note itself turns orange). */}
+              <span className="max-[420px]:hidden">Orange: {forecastNote}</span>
+              <span className="hidden max-[420px]:inline">
+                {forecastNote.charAt(0).toUpperCase() + forecastNote.slice(1)}
+              </span>
             </span>
-            <a
-              href="https://open-meteo.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="shrink-0 whitespace-nowrap underline decoration-white/30 underline-offset-2 hover:text-white"
-            >
-              Open-Meteo · CC BY 4.0
-            </a>
+            {hasModelFrames && (
+              <a
+                href="https://open-meteo.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="shrink-0 whitespace-nowrap underline decoration-white/30 underline-offset-2 hover:text-white"
+              >
+                Open-Meteo · CC BY 4.0
+              </a>
+            )}
           </div>
         )}
       </div>

@@ -18,6 +18,7 @@ import {
   ThreeHourlyModelRow,
   WeatherLocation,
 } from '../types/weather';
+import { estimateRadarMotion } from './radarNowcast';
 
 function finiteNums(vals: Array<number | null | undefined>): number[] {
   return vals.filter((v): v is number => typeof v === 'number' && Number.isFinite(v));
@@ -603,40 +604,67 @@ const HANDOVER_STEPS = [
   { radar: 0.15, model: 1 },
 ];
 
+/** Client-side radar nowcast frames: every 10 min (RainViewer's cadence) out to +60 min after the last radar frame. */
+const NOWCAST_STEP_S = 600;
+const NOWCAST_END_S = 3600;
+
 /**
- * Radar timeline: RainViewer observed frames (plus nowcast, if RainViewer ever serves it again),
- * followed by Open-Meteo model forecast frames (interpolated from hourly steps) after the last radar frame.
+ * Radar timeline: RainViewer observed frames, then a short radar nowcast (the latest frame moved along the rain
+ * motion estimated from the last few frames, see radarNowcast.ts), then Open-Meteo model forecast frames
+ * (interpolated from hourly steps). Without a usable motion estimate the model follows the radar directly.
  */
 export async function fetchRainViewerFrames(): Promise<RainViewerData | null> {
-  const [radar, grid] = await Promise.all([fetchRainViewerRadar(), fetchForecastGrid()]);
+  const radarPromise = fetchRainViewerRadar();
+  // Motion needs the radar frame list, but can run alongside the (slower, server-cached) grid fetch.
+  // RainViewer's own nowcast, if it ever serves one again, beats ours: skip the estimate then.
+  const motionPromise = radarPromise
+    .then((r) => (r && !r.frames.some((f) => f.kind === 'nowcast') ? estimateRadarMotion(r.host, r.frames) : null))
+    .catch(() => null);
+  const [radar, grid, motion] = await Promise.all([radarPromise, fetchForecastGrid(), motionPromise]);
   const radarFrames = radar?.frames ?? [];
   const lastRadarTime = radarFrames.length
     ? radarFrames[radarFrames.length - 1].time
     : Math.floor(Date.now() / 1000);
 
   const lastRadarPath = radarFrames.length ? radarFrames[radarFrames.length - 1].path : '';
+  const nowcastFrames: RainViewerFrame[] = [];
+  if (motion && lastRadarPath) {
+    for (let s = NOWCAST_STEP_S; s <= NOWCAST_END_S; s += NOWCAST_STEP_S) {
+      nowcastFrames.push({
+        time: lastRadarTime + s,
+        path: '',
+        kind: 'nowcast',
+        nowcast: { radarPath: lastRadarPath, seconds: s, opacity: 1 },
+      });
+    }
+  }
+  const forecastFrom = nowcastFrames.length ? lastRadarTime + NOWCAST_END_S : lastRadarTime;
+
   const gridUsable =
     !!grid && grid.times.length > 0 && grid.times.every((_, i) => Array.isArray(grid.precip[i]));
   const modelFrames: RainViewerFrame[] =
     grid && gridUsable
-      ? modelFrameTimes(lastRadarTime, grid.times[grid.times.length - 1]).map((time, i) => {
+      ? modelFrameTimes(forecastFrom, grid.times[grid.times.length - 1]).map((time, i) => {
           const step = HANDOVER_STEPS[i];
-          return {
-            time,
-            path: '',
-            kind: 'model' as const,
-            grid: gridBlendAt(grid.times, time),
-            ...(step && lastRadarPath ? { handover: { radarPath: lastRadarPath, ...step } } : {}),
-          };
+          const frame: RainViewerFrame = { time, path: '', kind: 'model', grid: gridBlendAt(grid.times, time) };
+          if (step && nowcastFrames.length) {
+            // Hand over from the nowcast, still moving, rather than from a frozen radar frame.
+            frame.nowcast = { radarPath: lastRadarPath, seconds: time - lastRadarTime, opacity: step.radar };
+            frame.modelOpacity = step.model;
+          } else if (step && lastRadarPath) {
+            frame.handover = { radarPath: lastRadarPath, ...step };
+          }
+          return frame;
         })
       : [];
 
-  const frames = [...radarFrames, ...modelFrames];
+  const frames = [...radarFrames, ...nowcastFrames, ...modelFrames];
   if (frames.length === 0) return null;
   return {
     host: radar?.host ?? '',
     generated: radar?.generated ?? Math.floor(Date.now() / 1000),
     frames,
     forecastGrid: modelFrames.length ? grid : null,
+    motion: nowcastFrames.length ? motion : null,
   };
 }

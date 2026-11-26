@@ -5,6 +5,16 @@
  */
 
 import { useState } from 'react';
+import { useConsensus } from '../hooks/useConsensus';
+import { CONFIDENCE_LABEL, type ConsensusModel } from '../utils/consensus';
+import {
+  CONFIDENCE_COLOR,
+  ConfidenceDot,
+  ConsensusInfoPanel,
+  InfoToggle,
+  ModelPicker,
+} from './consensus/ConsensusParts';
+import { TrackRecordCard } from './consensus/TrackRecordCard';
 import { BarChart3, AlertTriangle, RefreshCw, Layers, Wind } from 'lucide-react';
 import {
   GeminiCycloneSynthesis,
@@ -36,7 +46,15 @@ export function MultiModelComparison({
   cycloneSynthesis = null,
 }: MultiModelComparisonProps) {
   const [hourlyMetric, setHourlyMetric] = useState<HourlyMetric>('rain');
+  const [infoOpen, setInfoOpen] = useState(false);
+  const consensus = useConsensus();
   const isMetric = unitSystem === 'METRIC';
+  const dim = (id: ConsensusModel) => (consensus.selected.includes(id) ? '' : 'opacity-40');
+  const worstWeek = consensus.days.reduce<'high' | 'moderate' | 'low' | null>((acc, d) => {
+    const rank = { high: 0, moderate: 1, low: 2 } as const;
+    if (!d.confidence) return acc;
+    return !acc || rank[d.confidence] > rank[acc] ? d.confidence : acc;
+  }, null);
 
   const fmtTemp = (c: number | null | undefined): string => {
     if (c === null || c === undefined || !Number.isFinite(c)) return '—';
@@ -176,12 +194,6 @@ export function MultiModelComparison({
     ? wn3Bundle.daily10d.filter((d) => d.dateKey && !existingDateSet.has(d.dateKey)).slice(0, 3)
     : [];
 
-  const agreementAccent =
-    spreadOverview.agreementLabel === 'High Agreement'
-      ? 'text-[#34c759]'
-      : spreadOverview.agreementLabel === 'Moderate Spread'
-      ? 'text-[#ff9500]'
-      : 'text-[#ff3b30]';
 
   return (
     <div className="space-y-3.5 text-white">
@@ -191,13 +203,21 @@ export function MultiModelComparison({
           <div>
             <div className="font-mono text-[11px] uppercase tracking-[0.1em] text-white/60 flex items-center gap-1.5">
               <BarChart3 className="w-3.5 h-3.5 text-[#32ADE6] shrink-0" />
-              <span>Consensus Spread</span>
+              <span>7-Day Outlook</span>
+              <InfoToggle open={infoOpen} onToggle={() => setInfoOpen((v) => !v)} controls="consensus-info-week" />
             </div>
-            <div className={`text-sm font-semibold mt-1 ${agreementAccent}`}>
-              {spreadOverview.agreementLabel}
+            <div
+              className="text-sm font-semibold mt-1"
+              style={{ color: worstWeek ? CONFIDENCE_COLOR[worstWeek] : undefined }}
+            >
+              {consensus.outlook}
             </div>
             <p className="text-[11px] mt-1 leading-relaxed text-white/70">
-              {spreadOverview.agreementDetail}
+              Best estimates below are the middle of the models you've chosen
+              {consensus.days.some((d) => d.corrected) && consensus.site
+                ? `, corrected for how each has run at ${consensus.site.station?.name ?? consensus.site.label}`
+                : ''}
+              .
             </p>
           </div>
           <button
@@ -211,6 +231,10 @@ export function MultiModelComparison({
             <RefreshCw aria-hidden="true" className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
           </button>
         </div>
+
+        {infoOpen && (
+          <ConsensusInfoPanel id="consensus-info-week" site={consensus.site} corrections={consensus.corrections} />
+        )}
 
         <div className="grid grid-cols-3 gap-2 mt-3.5 pt-3 border-t border-white/10 text-xs tabular-nums">
           <div>
@@ -438,21 +462,24 @@ export function MultiModelComparison({
           )}
         </div>
 
+        <ModelPicker selected={consensus.selected} onToggle={consensus.toggle} />
+
         <div className="overflow-x-auto">
           <table className="w-full text-[11px] tabular-nums border-collapse">
             <thead>
               <tr className="border-b border-white/10 text-white/60 text-left">
-                <th className="py-1.5 pr-1.5 font-medium">Day</th>
+                <th className="py-1.5 pr-0.5 font-medium">Day</th>
+                <th className="py-1.5 px-[3px] font-semibold text-right text-white">Best</th>
                 {showWn3Column && (
-                  <th className="py-1.5 px-1 font-semibold text-right text-[#ff3b30] bg-[#ff3b30]/10">
+                  <th className="py-1.5 px-[3px] font-semibold text-right text-[#ff3b30] bg-[#ff3b30]/10">
                     WN3
                   </th>
                 )}
-                <th className="py-1.5 px-1 font-semibold text-right text-[#32ADE6]">WN2</th>
-                <th className="py-1.5 px-1 font-semibold text-right text-[#34c759]">BOM</th>
-                <th className="py-1.5 px-1 font-semibold text-right text-indigo-400">ECMWF</th>
-                <th className="py-1.5 px-1 font-semibold text-right text-[#ff9500]">GFS</th>
-                <th className="py-1.5 pl-1 font-medium text-right">Δ</th>
+                <th className={`py-1.5 px-[3px] font-semibold text-right text-[#32ADE6] ${dim('wn2')}`}>WN2</th>
+                <th className={`py-1.5 px-[3px] font-semibold text-right text-[#34c759] ${dim('bom')}`}>BOM</th>
+                <th className={`py-1.5 px-[3px] font-semibold text-right text-indigo-400 ${dim('ecmwf')}`}>ECMWF</th>
+                <th className={`py-1.5 px-[3px] font-semibold text-right text-[#ff9500] ${dim('gfs')}`}>GFS</th>
+                <th className="py-1.5 pl-[3px] font-medium text-right" title="Spread: highest minus lowest forecast (ΔT max temperature, ΔR rain)">Δ</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/[0.06]">
@@ -494,17 +521,36 @@ export function MultiModelComparison({
 
                 return (
                   <tr key={day.dateKey} className="hover:bg-white/[0.04] align-top">
-                    <td className="py-2 pr-1.5">
-                      <div className="font-semibold text-white whitespace-nowrap">{day.dayLabel}</div>
+                    <td className="py-2 pr-0.5">
+                      <div className="font-semibold text-white whitespace-nowrap">{day.dayLabel.replace(/,?\s+[A-Z][a-z]{2}$/, '').replace(',', '')}</div>
                       {(wn3Day?.shortText || day.bom?.shortText) && (
-                        <div className="text-[11px] text-white/60 line-clamp-1 max-w-[85px]" title={wn3Day?.shortText || day.bom?.shortText}>
-                          {wn3Day?.shortText || day.bom?.shortText}
-                        </div>
+                        <span className="sr-only">{wn3Day?.shortText || day.bom?.shortText}</span>
                       )}
                     </td>
 
+                    <td className="py-2 px-[3px] text-right">
+                      {(() => {
+                        const est = consensus.days.find((d) => d.dateKey === day.dateKey);
+                        if (!est || est.contributors.length === 0) return <span className="text-white/30">—</span>;
+                        return (
+                          <div className="flex flex-col items-end leading-tight font-mono">
+                            <span className="text-white font-semibold flex items-center gap-[3px]">
+                              <ConfidenceDot confidence={est.confidence} />
+                              {fmtTemp(est.tmin)}/{fmtTemp(est.tmax)}
+                            </span>
+                            <span className="text-[11px] text-[#32ADE6] font-semibold">
+                              {est.rain !== null ? `${fmtRain(est.rain)}${isMetric ? 'mm' : 'in'}` : '—'}
+                            </span>
+                            {est.confidence && est.confidence !== 'high' && (
+                              <span className="sr-only">{CONFIDENCE_LABEL[est.confidence]}</span>
+                            )}
+                          </div>
+                        );
+                      })()}
+                    </td>
+
                     {showWn3Column && (
-                      <td className="py-2 px-1 text-right bg-[#ff3b30]/10 font-mono">
+                      <td className="py-2 px-[3px] text-right bg-[#ff3b30]/10 font-mono">
                         {wn3Day ? (
                           <div className="flex flex-col items-end leading-tight">
                             <span className="text-white font-semibold">
@@ -535,15 +581,18 @@ export function MultiModelComparison({
                       </td>
                     )}
 
-                    <td className="py-2 px-1 text-right">{renderModelCol(day.weatherNext2)}</td>
-                    <td className="py-2 px-1 text-right">{renderModelCol(day.bom)}</td>
-                    <td className="py-2 px-1 text-right">{renderModelCol(day.ecmwf)}</td>
-                    <td className="py-2 px-1 text-right">{renderModelCol(day.gfs)}</td>
-                    <td className="py-2 pl-1 text-right font-mono">
+                    <td className={`py-2 px-[3px] text-right ${dim('wn2')}`}>{renderModelCol(day.weatherNext2)}</td>
+                    <td className={`py-2 px-[3px] text-right ${dim('bom')}`}>{renderModelCol(day.bom)}</td>
+                    <td className={`py-2 px-[3px] text-right ${dim('ecmwf')}`}>{renderModelCol(day.ecmwf)}</td>
+                    <td className={`py-2 px-[3px] text-right ${dim('gfs')}`}>{renderModelCol(day.gfs)}</td>
+                    <td className="py-2 pl-[3px] text-right font-mono">
                       <div className="flex flex-col items-end leading-tight">
-                        <span className="text-white/75">ΔT {fmtTempDelta(effectiveDeltaT)}</span>
+                        <span className="text-white/75 whitespace-nowrap" title="ΔT: max temperature spread">
+                          <span className="sr-only">ΔT </span>
+                          {fmtTempDelta(effectiveDeltaT)}
+                        </span>
                         <span
-                          className={`text-[11px] font-semibold ${
+                          className={`text-[11px] font-semibold whitespace-nowrap ${
                             (effectiveDeltaR ?? 0) >= 15
                               ? 'text-[#ff3b30]'
                               : (effectiveDeltaR ?? 0) >= 5
@@ -551,7 +600,8 @@ export function MultiModelComparison({
                               : 'text-[#34c759]'
                           }`}
                         >
-                          ΔR {effectiveDeltaR !== null ? `${fmtRain(effectiveDeltaR)}${isMetric ? 'mm' : 'in'}` : '—'}
+                          <span className="sr-only">ΔR </span>
+                          {effectiveDeltaR !== null ? `${fmtRain(effectiveDeltaR)}${isMetric ? 'mm' : 'in'}` : '—'}
                         </span>
                       </div>
                     </td>
@@ -562,11 +612,12 @@ export function MultiModelComparison({
               {showWn3Column &&
                 extraWn3Days.map((wn3Day) => (
                   <tr key={wn3Day.dateKey} className="hover:bg-white/[0.04] align-top">
-                    <td className="py-2 pr-1.5">
+                    <td className="py-2 pr-1">
                       <div className="font-semibold text-white/85 whitespace-nowrap">{wn3Day.dayLabel}</div>
                       <div className="text-[11px] text-white/60">WN3 Ext</div>
                     </td>
-                    <td className="py-2 px-1 text-right bg-[#ff3b30]/10 font-mono">
+                    <td className="py-2 px-[3px] text-right text-white/25">—</td>
+                    <td className="py-2 px-[3px] text-right bg-[#ff3b30]/10 font-mono">
                       <div className="flex flex-col items-end leading-tight">
                         <span className="text-white font-semibold">
                           {fmtTemp(wn3Day.minTemp)}/{fmtTemp(wn3Day.maxTemp)}
@@ -576,17 +627,25 @@ export function MultiModelComparison({
                         </span>
                       </div>
                     </td>
-                    <td className="py-2 px-1 text-right text-white/25">—</td>
-                    <td className="py-2 px-1 text-right text-white/25">—</td>
-                    <td className="py-2 px-1 text-right text-white/25">—</td>
-                    <td className="py-2 px-1 text-right text-white/25">—</td>
-                    <td className="py-2 pl-1 text-right text-white/25">—</td>
+                    <td className="py-2 px-[3px] text-right text-white/25">—</td>
+                    <td className="py-2 px-[3px] text-right text-white/25">—</td>
+                    <td className="py-2 px-[3px] text-right text-white/25">—</td>
+                    <td className="py-2 px-[3px] text-right text-white/25">—</td>
+                    <td className="py-2 pl-[3px] text-right text-white/25">—</td>
                   </tr>
                 ))}
             </tbody>
           </table>
         </div>
+        <p className="text-[11px] text-white/60 flex items-center gap-2 flex-wrap">
+          <span className="flex items-center gap-1"><ConfidenceDot confidence="high" /> agree</span>
+          <span className="flex items-center gap-1"><ConfidenceDot confidence="moderate" /> some spread</span>
+          <span className="flex items-center gap-1"><ConfidenceDot confidence="low" /> disagree</span>
+          <span>· Δ = raw spread (max temp, rain) · faded columns aren't used</span>
+        </p>
       </div>
+
+      <TrackRecordCard summary={consensus.summary} preferredSiteId={consensus.site?.id} fmtDelta={fmtTempDelta} />
     </div>
   );
 }

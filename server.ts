@@ -13,6 +13,8 @@ import { registerFeedRoutes } from './server/feeds/index';
 import { registerPushRoutes, startPushPoller } from './server/push/index';
 import { registerBriefingRoutes } from './server/briefing';
 import { registerForecastGridRoute } from './server/forecastGrid';
+import { registerTrackerRoutes, startTrackerScheduler } from './server/tracker/index';
+import { FileTrackerStore } from './server/tracker/store';
 import { rateLimit } from './server/rateLimit';
 
 function parseCoordPair(latRaw: unknown, lngRaw: unknown): { lat: number; lng: number } | null {
@@ -63,6 +65,7 @@ app.use('/api/briefing', rateLimit({ windowMs: 60_000, max: 6, name: 'AI briefin
 app.use('/api/weather', rateLimit({ windowMs: 60_000, max: 60, name: 'weather' }));
 app.use(['/api/geocode', '/api/places'], rateLimit({ windowMs: 60_000, max: 30, name: 'places/geocode' }));
 app.use('/api/push', rateLimit({ windowMs: 60_000, max: 10, name: 'push' }));
+app.use('/api/tracker', rateLimit({ windowMs: 60_000, max: 30, name: 'tracker' }));
 
 // -------------------------------------------------------------
 // Two API Keys Architecture:
@@ -656,6 +659,8 @@ registerFeedRoutes(app);
 registerPushRoutes(app);
 registerBriefingRoutes(app);
 registerForecastGridRoute(app);
+const trackerStore = new FileTrackerStore();
+registerTrackerRoutes(app, trackerStore);
 
 // Vite & Static Asset Handling
 async function startServer() {
@@ -692,6 +697,7 @@ async function startServer() {
   server.listen(port, '0.0.0.0', () => {
     console.log(`Weather Map Server running on http://0.0.0.0:${port}`);
     startPushPoller();
+    startTrackerScheduler(trackerStore);
   });
 }
 

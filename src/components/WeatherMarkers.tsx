@@ -12,6 +12,8 @@ import { PRESET_LOCATIONS } from '../utils/mockWeatherData';
 import { panToWithVerticalOffset } from '../utils/mapUtils';
 import { useIsDesktop } from '../hooks/useIsDesktop';
 import { useAppData } from '../state/AppDataContext';
+import { useConsensus } from '../hooks/useConsensus';
+import { CONFIDENCE_LABEL } from '../utils/consensus';
 
 interface WeatherMarkersProps {
   selectedLocation: WeatherLocation;
@@ -39,6 +41,7 @@ export function WeatherMarkers({
   // Below 1024px the bottom sheet already shows this summary, so skip the InfoWindow clutter.
   const isMobile = !useIsDesktop();
   const { onChangeSheetSnap } = useAppData();
+  const { today: todayEstimate } = useConsensus();
 
   useEffect(() => {
     setShowInfoWindow(true);
@@ -144,7 +147,9 @@ export function WeatherMarkers({
               <div className="space-y-1.5 text-[11px] tabular-nums">
                 <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500">
                   <span>Today Consensus</span>
-                  <span className="text-slate-700">{multiModelBundle.spreadOverview.agreementLabel}</span>
+                  <span className="text-slate-700">
+                    {todayEstimate?.confidence ? CONFIDENCE_LABEL[todayEstimate.confidence] : '—'}
+                  </span>
                 </div>
                 {todayRow && (
                   <div className="grid grid-cols-2 gap-1.5 bg-slate-50 border border-slate-200 rounded-lg p-2 font-mono text-[11px]">

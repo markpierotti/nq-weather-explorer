@@ -1,0 +1,12 @@
+# Files never uploaded by `gcloud run deploy --source .` (Cloud Build builds the Dockerfile from the rest).
+.gcloudignore
+.git
+.gitignore
+.claude
+.env
+.env.*
+!.env.example
+node_modules
+dist
+data
+*.log

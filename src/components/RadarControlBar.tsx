@@ -34,7 +34,7 @@ function formatBrisbaneTime(unixSec: number): string {
 }
 
 /**
- * "14:20 · −20 min" for observed frames, "14:40 · +10 min forecast" for RainViewer nowcast frames,
+ * "14:20 · −20 min" for observed frames, "14:40 · +10 min forecast" for nowcast frames (radar moved forward),
  * "17:00 · +2 h model forecast" for Open-Meteo model frames (not radar).
  */
 function describeFrame(frame: RainViewerFrame | null, nowMs: number): { text: string; suffix?: string; isForecast: boolean } {
@@ -42,12 +42,16 @@ function describeFrame(frame: RainViewerFrame | null, nowMs: number): { text: st
   const time = formatBrisbaneTime(frame.time);
   const diffMin = Math.round((frame.time * 1000 - nowMs) / 60000);
   if (frame.kind === 'model') {
-    const ahead = diffMin < 60 ? `+${Math.max(0, diffMin)} min` : `+${Math.round(diffMin / 30) / 2} h`;
+    // Minutes up to 2 h: the 15-min frames there would otherwise share "+1.5 h" labels.
+    const ahead = diffMin < 120 ? `+${Math.max(0, diffMin)} min` : `+${Math.round(diffMin / 30) / 2} h`;
     // " forecast" is dropped on narrow screens (the attribution row below says it); screen readers get it all.
     return { text: `${time} · ${ahead} model`, suffix: ' forecast', isForecast: true };
   }
   if (frame.kind === 'nowcast') {
-    return { text: `${time} · +${Math.max(0, diffMin)} min forecast`, isForecast: true };
+    // The latest radar frame is ~10 min old, so the first nowcast frames can land at or just before "now".
+    // Like model frames, the suffix is dropped on narrow screens, where the note row below says it.
+    if (diffMin <= 0) return { text: `${time} · now`, suffix: ' (forecast)', isForecast: true };
+    return { text: `${time} · +${diffMin} min`, suffix: ' forecast', isForecast: true };
   }
   const rel = Math.abs(diffMin) < 1 ? 'now' : `−${Math.abs(diffMin)} min`;
   return { text: `${time} · ${rel}`, isForecast: false };
@@ -85,7 +89,19 @@ export function RadarControlBar() {
   const { text, suffix, isForecast } = describeFrame(activeFrame, nowMs);
   const fullText = text + (suffix ?? '');
   const hasModelFrames = frames.some((f) => f.kind === 'model');
+  const hasForecastFrames = pastCount < frames.length;
   const isModelFrame = activeFrame?.kind === 'model';
+  const hasNowcastFrames = frames.some((f) => f.kind === 'nowcast');
+  // Say what the orange frames are: the nowcast is radar moved forward, the model isn't radar at all,
+  // and in between (+30 to +90 min) one fades into the other.
+  const forecastNote =
+    activeFrame?.nowcast && activeFrame.grid
+      ? 'radar trend fading into model'
+      : activeFrame?.kind === 'nowcast'
+        ? 'radar moved forward, not observed'
+        : isModelFrame || !hasNowcastFrames
+          ? 'model rain forecast, not radar'
+          : 'forecast, not observed radar';
   const hidden = !isDesktop && sheetSnap === 'full';
 
   // Fraction of the track where forecast frames begin (between the last past and first forecast frame).
@@ -181,7 +197,7 @@ export function RadarControlBar() {
                 onChange={(e) => onChangeFrameIndex(Number.parseInt(e.target.value, 10))}
                 disabled={frames.length === 0}
                 className={`radar-scrubber absolute inset-0 w-full h-full ${isForecast ? 'is-forecast' : ''}`}
-                aria-label={hasModelFrames ? 'Radar and model forecast timeline' : 'Radar timeline'}
+                aria-label={hasForecastFrames ? 'Radar and forecast timeline' : 'Radar timeline'}
                 aria-valuetext={fullText}
               />
             </div>
@@ -209,25 +225,31 @@ export function RadarControlBar() {
               </span>
             ))}
             <span className="ml-auto flex items-center gap-1 whitespace-nowrap">
-              <span className="w-2.5 h-0.5 bg-[#ff9500]" /> {hasModelFrames ? 'model forecast' : 'forecast'}
+              <span className="w-2.5 h-0.5 bg-[#ff9500]" /> {hasModelFrames && !hasNowcastFrames ? 'model forecast' : 'forecast'}
             </span>
           </div>
         )}
 
-        {/* Model frames are not radar: say so, and credit Open-Meteo (CC BY 4.0), whenever they're on the timeline. */}
-        {hasModelFrames && (
+        {/* Forecast frames are not observed radar: say so, and credit Open-Meteo (CC BY 4.0) for the model frames. */}
+        {hasForecastFrames && (
           <div className="flex items-center justify-between gap-2 px-1 pt-0.5 text-[11px] text-white/60">
-            <span className={`truncate transition-colors ${isModelFrame ? 'text-[#ff9500]' : ''}`}>
-              Orange: model rain forecast, not radar
+            <span className={`truncate transition-colors ${isForecast ? 'text-[#ff9500]' : ''}`}>
+              {/* "Orange:" explains the orange ticks; narrow screens drop it to fit (the note itself turns orange). */}
+              <span className="max-[420px]:hidden">Orange: {forecastNote}</span>
+              <span className="hidden max-[420px]:inline">
+                {forecastNote.charAt(0).toUpperCase() + forecastNote.slice(1)}
+              </span>
             </span>
-            <a
-              href="https://open-meteo.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="shrink-0 whitespace-nowrap underline decoration-white/30 underline-offset-2 hover:text-white"
-            >
-              Open-Meteo · CC BY 4.0
-            </a>
+            {hasModelFrames && (
+              <a
+                href="https://open-meteo.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="shrink-0 whitespace-nowrap underline decoration-white/30 underline-offset-2 hover:text-white"
+              >
+                Open-Meteo · CC BY 4.0
+              </a>
+            )}
           </div>
         )}
       </div>

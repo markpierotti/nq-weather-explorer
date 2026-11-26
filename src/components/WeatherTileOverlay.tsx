@@ -7,12 +7,16 @@
 import { useEffect, useRef } from 'react';
 import { useMap } from '@vis.gl/react-google-maps';
 import type { ForecastGridResponse, RainViewerFrame } from '../types/weather';
+import type { MotionField } from '../services/radarMotion';
+import { drawNowcastTile, radarTileUrl, type NowcastTileSpec } from '../services/radarNowcast';
 
 interface WeatherTileOverlayProps {
   rainViewerHost?: string;
   rainViewerFrame?: RainViewerFrame | null;
   /** Open-Meteo model rain grid, drawn for frames of kind 'model'. */
   forecastGrid?: ForecastGridResponse | null;
+  /** Rain motion field, drawn for frames carrying a client-side `nowcast`. */
+  motionField?: MotionField | null;
   opacity: number;
   visible: boolean;
 }
@@ -191,7 +195,7 @@ function makeRadarLayer(
       const subY = y % factor;
 
       const img = ownerDocument.createElement('img');
-      img.src = `${host}${framePath}/256/${nativeZoom}/${srcX}/${srcY}/1/1_1.png`;
+      img.src = radarTileUrl(host, framePath, nativeZoom, srcX, srcY);
       img.alt = '';
       img.draggable = false;
       img.style.position = 'absolute';
@@ -205,6 +209,41 @@ function makeRadarLayer(
         img.style.display = 'none';
       };
       div.appendChild(img);
+      return div;
+    },
+    releaseTile(tile: Element) {
+      nodes.delete(tile as HTMLDivElement);
+    },
+  };
+}
+
+/** Radar nowcast: the latest radar frame's tiles warped along the rain motion (see services/radarNowcast.ts). */
+function makeNowcastLayer(
+  spec: NowcastTileSpec,
+  nodes: Map<HTMLDivElement, number>,
+  getOpacity: () => number,
+  mul: number,
+): google.maps.MapType {
+  return {
+    tileSize: new google.maps.Size(256, 256),
+    maxZoom: 18,
+    minZoom: 0,
+    name: 'Radar nowcast',
+    alt: 'Radar nowcast (latest radar moved along its recent motion)',
+    projection: null,
+    radius: 6378137,
+    getTile(coord: google.maps.Point, zoom: number, ownerDocument: Document): Element {
+      const div = makeTileDiv(ownerDocument, nodes, getOpacity(), mul);
+      const n = 1 << zoom;
+      if (coord.y < 0 || coord.y >= n) return div;
+      const normX = ((coord.x % n) + n) % n;
+      const canvas = drawNowcastTile(ownerDocument, spec, normX, coord.y, zoom);
+      if (canvas) {
+        canvas.style.width = '256px';
+        canvas.style.height = '256px';
+        canvas.style.display = 'block';
+        div.appendChild(canvas);
+      }
       return div;
     },
     releaseTile(tile: Element) {
@@ -253,6 +292,7 @@ export function WeatherTileOverlay({
   rainViewerHost,
   rainViewerFrame,
   forecastGrid,
+  motionField,
   opacity,
   visible,
 }: WeatherTileOverlayProps) {
@@ -288,22 +328,30 @@ export function WeatherTileOverlay({
       map.overlayMapTypes.push(layer);
     };
 
-    if (rainViewerFrame.kind === 'model') {
-      const blend = rainViewerFrame.grid;
-      const from = blend ? forecastGrid?.precip[blend.from] : undefined;
-      const to = blend ? forecastGrid?.precip[blend.to] : undefined;
-      if (!forecastGrid || !blend || !from || !to) return removeLayers;
-      const values = blend.mix === 0 ? from : from.map((v, i) => v + ((to[i] ?? 0) - v) * blend.mix);
-      const handover = rainViewerFrame.handover;
-      // Last radar frame first so it sits beneath the model while it fades out.
-      if (handover && host) add(makeRadarLayer(host, handover.radarPath, nodes, getOpacity, handover.radar));
-      add(makeModelLayer(forecastGrid, values, nodes, getOpacity, handover?.model ?? 1));
+    const { handover, nowcast } = rainViewerFrame;
+    // Radar-derived layers first so they sit beneath the model while they fade out.
+    if (handover && host) add(makeRadarLayer(host, handover.radarPath, nodes, getOpacity, handover.radar));
+    if (nowcast && host && motionField) {
+      const spec = { host, radarPath: nowcast.radarPath, field: motionField, seconds: nowcast.seconds };
+      add(makeNowcastLayer(spec, nodes, getOpacity, nowcast.opacity));
+    }
+
+    // Model rain: 'model' frames, and late nowcast frames that are blending into the model.
+    const blend = rainViewerFrame.grid;
+    if (blend) {
+      const from = forecastGrid?.precip[blend.from];
+      const to = forecastGrid?.precip[blend.to];
+      if (forecastGrid && from && to) {
+        const values = blend.mix === 0 ? from : from.map((v, i) => v + ((to[i] ?? 0) - v) * blend.mix);
+        const mul = rainViewerFrame.modelOpacity ?? handover?.model ?? 1;
+        add(makeModelLayer(forecastGrid, values, nodes, getOpacity, mul));
+      }
     } else if (host && rainViewerFrame.path) {
       add(makeRadarLayer(host, rainViewerFrame.path, nodes, getOpacity, 1));
     }
 
     return removeLayers;
-  }, [map, rainViewerHost, rainViewerFrame, forecastGrid, visible]);
+  }, [map, rainViewerHost, rainViewerFrame, forecastGrid, motionField, visible]);
 
   // Dynamically update opacity without rebuilding the layers
   useEffect(() => {

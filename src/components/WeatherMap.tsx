@@ -25,6 +25,7 @@ function RadarTileLayer() {
       rainViewerHost={rainViewerData?.host}
       rainViewerFrame={rainViewerData?.frames[activeFrameIndex] ?? null}
       forecastGrid={rainViewerData?.forecastGrid ?? null}
+      motionField={rainViewerData?.motion ?? null}
       opacity={radarOpacity}
       visible={radarVisible}
     />

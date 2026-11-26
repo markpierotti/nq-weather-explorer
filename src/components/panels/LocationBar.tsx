@@ -36,7 +36,7 @@ export function LocationSearchRow({ isAddOpen, onToggleAdd, trailing }: Location
       <div className="flex-1 min-w-0">
         <PlaceAutocompleteNew
           onSelectLocation={onSelectLocation}
-          placeholder="Search for a city or airport"
+          placeholder="Search"
           focusToken={searchFocusToken}
         />
       </div>

@@ -18,6 +18,7 @@ import {
   ThreeHourlyModelRow,
   WeatherLocation,
 } from '../types/weather';
+import { estimateRadarMotion } from './radarNowcast';
 
 function finiteNums(vals: Array<number | null | undefined>): number[] {
   return vals.filter((v): v is number => typeof v === 'number' && Number.isFinite(v));
@@ -596,19 +597,51 @@ function gridBlendAt(times: number[], t: number): { from: number; to: number; mi
   return { from: last, to: last, mix: 0 };
 }
 
-/** Opacity multipliers for the first model frames: the last radar frame dissolves into the model. */
+/** No nowcast: opacity multipliers for the first model frames, so the frozen last radar frame dissolves into the model. */
 const HANDOVER_STEPS = [
   { radar: 0.7, model: 0.55 },
   { radar: 0.4, model: 0.8 },
   { radar: 0.15, model: 1 },
 ];
 
+/** Client-side radar nowcast frames: every 10 min (RainViewer's cadence) out to +60 min after the last radar frame. */
+const NOWCAST_STEP_S = 600;
+const NOWCAST_END_S = 3600;
+/** Don't extrapolate radar that's already this old: the "nowcast" would mostly be in the past. */
+const NOWCAST_MAX_RADAR_AGE_S = 45 * 60;
+/** Nowcast → model crossfade, by lead time after the last radar frame. */
+const BLEND_START_S = 30 * 60;
+const BLEND_END_S = 90 * 60;
+
 /**
- * Radar timeline: RainViewer observed frames (plus nowcast, if RainViewer ever serves it again),
- * followed by Open-Meteo model forecast frames (interpolated from hourly steps) after the last radar frame.
+ * Layer opacities for a forecast frame at a given lead: the nowcast alone to +30 min, the model alone from
+ * +90 min. The model layer sits on top, so the nowcast fades more slowly (1 − s²) than the model rises (s):
+ * where both have rain the total stays near full strength instead of dipping mid-blend.
+ */
+function blendWeights(lead: number): { nowcast: number; model: number } {
+  const t = Math.max(0, Math.min(1, (lead - BLEND_START_S) / (BLEND_END_S - BLEND_START_S)));
+  const s = t * t * (3 - 2 * t);
+  return { nowcast: 1 - s * s, model: s };
+}
+
+/**
+ * Radar timeline: RainViewer observed frames, then a short radar nowcast (the latest frame moved along the rain
+ * motion estimated from the last few frames, see radarNowcast.ts), then Open-Meteo model forecast frames
+ * (interpolated from hourly steps). Without a usable motion estimate the model follows the radar directly.
  */
 export async function fetchRainViewerFrames(): Promise<RainViewerData | null> {
-  const [radar, grid] = await Promise.all([fetchRainViewerRadar(), fetchForecastGrid()]);
+  const radarPromise = fetchRainViewerRadar();
+  // Motion needs the radar frame list, but can run alongside the (slower, server-cached) grid fetch.
+  // RainViewer's own nowcast, if it ever serves one again, beats ours: skip the estimate then.
+  const motionPromise = radarPromise
+    .then((r) => {
+      const last = r?.frames[r.frames.length - 1];
+      if (!r || !last || last.kind !== 'past') return null;
+      if (Date.now() / 1000 - last.time > NOWCAST_MAX_RADAR_AGE_S) return null;
+      return estimateRadarMotion(r.host, r.frames);
+    })
+    .catch(() => null);
+  const [radar, grid, motion] = await Promise.all([radarPromise, fetchForecastGrid(), motionPromise]);
   const radarFrames = radar?.frames ?? [];
   const lastRadarTime = radarFrames.length
     ? radarFrames[radarFrames.length - 1].time
@@ -617,26 +650,50 @@ export async function fetchRainViewerFrames(): Promise<RainViewerData | null> {
   const lastRadarPath = radarFrames.length ? radarFrames[radarFrames.length - 1].path : '';
   const gridUsable =
     !!grid && grid.times.length > 0 && grid.times.every((_, i) => Array.isArray(grid.precip[i]));
+  const useNowcast = !!motion && !!lastRadarPath;
+
+  /**
+   * With a nowcast, every frame up to +90 min carries it, moving, at its blend weight; the model layer joins
+   * from +30 min. Without one, the first model frames crossfade from the frozen last radar frame instead.
+   */
+  const withNowcast = (frame: RainViewerFrame): RainViewerFrame => {
+    const lead = frame.time - lastRadarTime;
+    if (lead >= BLEND_END_S) return frame;
+    const w = gridUsable ? blendWeights(lead) : { nowcast: 1, model: 0 };
+    frame.nowcast = { radarPath: lastRadarPath, seconds: lead, opacity: w.nowcast };
+    if (grid && gridUsable && w.model > 0) {
+      frame.grid = gridBlendAt(grid.times, frame.time);
+      frame.modelOpacity = w.model;
+    }
+    return frame;
+  };
+
+  const nowcastFrames: RainViewerFrame[] = [];
+  if (useNowcast) {
+    for (let s = NOWCAST_STEP_S; s <= NOWCAST_END_S; s += NOWCAST_STEP_S) {
+      nowcastFrames.push(withNowcast({ time: lastRadarTime + s, path: '', kind: 'nowcast' }));
+    }
+  }
+  const forecastFrom = useNowcast ? lastRadarTime + NOWCAST_END_S : lastRadarTime;
+
   const modelFrames: RainViewerFrame[] =
     grid && gridUsable
-      ? modelFrameTimes(lastRadarTime, grid.times[grid.times.length - 1]).map((time, i) => {
+      ? modelFrameTimes(forecastFrom, grid.times[grid.times.length - 1]).map((time, i) => {
+          const frame: RainViewerFrame = { time, path: '', kind: 'model', grid: gridBlendAt(grid.times, time) };
+          if (useNowcast) return withNowcast(frame);
           const step = HANDOVER_STEPS[i];
-          return {
-            time,
-            path: '',
-            kind: 'model' as const,
-            grid: gridBlendAt(grid.times, time),
-            ...(step && lastRadarPath ? { handover: { radarPath: lastRadarPath, ...step } } : {}),
-          };
+          if (step && lastRadarPath) frame.handover = { radarPath: lastRadarPath, ...step };
+          return frame;
         })
       : [];
 
-  const frames = [...radarFrames, ...modelFrames];
+  const frames = [...radarFrames, ...nowcastFrames, ...modelFrames];
   if (frames.length === 0) return null;
   return {
     host: radar?.host ?? '',
     generated: radar?.generated ?? Math.floor(Date.now() / 1000),
     frames,
-    forecastGrid: modelFrames.length ? grid : null,
+    forecastGrid: gridUsable && frames.some((f) => f.grid) ? grid : null,
+    motion: useNowcast ? motion : null,
   };
 }

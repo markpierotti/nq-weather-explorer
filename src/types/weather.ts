@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import type { MotionField } from '../services/radarMotion';
+
 export type WeatherUnitSystem = 'METRIC' | 'IMPERIAL';
 
 export interface LatLng {
@@ -413,7 +415,10 @@ export interface RainViewerFrame {
   time: number;
   /** RainViewer tile path; empty for 'model' frames. */
   path: string;
-  /** 'past' = observed radar, 'nowcast' = RainViewer extrapolation, 'model' = Open-Meteo hourly forecast. */
+  /**
+   * 'past' = observed radar; 'nowcast' = radar extrapolation (RainViewer's own frames if it serves them, else our
+   * client-side advection of the latest radar frame, see `nowcast`); 'model' = Open-Meteo hourly forecast.
+   */
   kind: 'past' | 'nowcast' | 'model';
   /**
    * 'model' frames: the frame's rain rate, interpolated in time between two hourly grid steps
@@ -425,6 +430,13 @@ export interface RainViewerFrame {
    * into the model (opacity × model), so the timeline doesn't hard-cut from radar to forecast.
    */
   handover?: { radarPath: string; radar: number; model: number };
+  /**
+   * Client-side radar nowcast: the radar frame at radarPath moved along the estimated rain motion for `seconds`
+   * (see services/radarNowcast.ts), drawn beneath any model layer at opacity × `opacity`.
+   */
+  nowcast?: { radarPath: string; seconds: number; opacity: number };
+  /** Opacity multiplier for this frame's model layer when it's blended with a nowcast (default 1). */
+  modelOpacity?: number;
 }
 
 export interface RainViewerData {
@@ -433,6 +445,8 @@ export interface RainViewerData {
   frames: RainViewerFrame[];
   /** Open-Meteo model rain grid backing the 'model' frames, when available. */
   forecastGrid?: ForecastGridResponse | null;
+  /** Rain motion estimated from recent radar frames, backing the client-side 'nowcast' frames. */
+  motion?: MotionField | null;
 }
 
 /** /api/weather/forecast-grid: hourly model precipitation on a regular lat/lon grid over NQ. */

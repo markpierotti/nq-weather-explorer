@@ -186,3 +186,18 @@ html[data-sheet-dragging] .follows-sheet {
   cursor: default;
   opacity: 0.5;
 }
+
+/*
+ * Google Maps InfoWindow close button: with the map's dark colour scheme Maps paints the X white, but our
+ * InfoWindow cards are white, so the button was invisible. Give it a slate X that darkens on hover/focus.
+ */
+.gm-style-iw-c .gm-ui-hover-effect {
+  opacity: 1 !important;
+}
+.gm-style-iw-c .gm-ui-hover-effect > span {
+  background-color: #475569 !important;
+}
+.gm-style-iw-c .gm-ui-hover-effect:hover > span,
+.gm-style-iw-c .gm-ui-hover-effect:focus-visible > span {
+  background-color: #0f172a !important;
+}

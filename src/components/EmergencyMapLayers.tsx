@@ -127,18 +127,18 @@ export function EmergencyMapLayers({
 
     const outerGlow = new google.maps.Polyline({
       path: BRUCE_HWY_CORRIDOR_PATH,
-      strokeColor: '#0284c7',
-      strokeOpacity: 0.28,
-      strokeWeight: 10,
+      strokeColor: '#32ADE6',
+      strokeOpacity: 0.35,
+      strokeWeight: 12,
       zIndex: 5,
       map,
     });
 
     const coreLine = new google.maps.Polyline({
       path: BRUCE_HWY_CORRIDOR_PATH,
-      strokeColor: '#0369a1',
-      strokeOpacity: 0.85,
-      strokeWeight: 3.5,
+      strokeColor: '#38bdf8',
+      strokeOpacity: 0.95,
+      strokeWeight: 4.5,
       zIndex: 6,
       map,
     });

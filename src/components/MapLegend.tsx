@@ -183,8 +183,8 @@ export function MapLegend() {
                   <span
                     className="w-4 h-1 rounded-full shrink-0"
                     style={{
-                      background: '#0369a1',
-                      boxShadow: '0 0 6px rgba(2, 132, 199, 0.8)',
+                      background: '#38bdf8',
+                      boxShadow: '0 0 8px rgba(50, 173, 230, 0.9)',
                     }}
                     aria-hidden="true"
                   />

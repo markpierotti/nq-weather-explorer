@@ -105,7 +105,7 @@ export function RadarControlBar() {
             type="button"
             onClick={onToggleRadarPlay}
             disabled={frames.length === 0}
-            className="w-11 h-11 rounded-full bg-[#32ADE6] hover:bg-[#4cbdf0] disabled:bg-white/15 text-white flex items-center justify-center transition-colors shrink-0 cursor-pointer"
+            className="w-11 h-11 rounded-full bg-[#32ADE6] hover:bg-[#4cbdf0] disabled:bg-white/15 text-[#111113] disabled:text-white/60 flex items-center justify-center transition-colors shrink-0 cursor-pointer"
             title={isRadarPlaying ? 'Pause radar loop' : 'Play radar loop'}
             aria-label={isRadarPlaying ? 'Pause radar loop' : 'Play radar loop'}
           >
@@ -189,7 +189,7 @@ export function RadarControlBar() {
         </div>
 
         {showLegend && (
-          <div className="flex items-center gap-2 pt-1.5 px-1 text-[10px] text-white/60 overflow-x-auto no-scrollbar">
+          <div className="flex items-center gap-2 pt-1.5 px-1 text-[11px] text-white/60 overflow-x-auto no-scrollbar">
             {LEGEND.map((l) => (
               <span key={l.color} className="flex items-center gap-1 whitespace-nowrap">
                 <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: l.color }} />

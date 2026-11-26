@@ -123,7 +123,7 @@ export function WeatherMarkers({
         >
           <div className="w-[290px] p-0.5 text-slate-800 font-sans text-xs space-y-2">
             <div className="border-b border-slate-100 pb-2">
-              <div className="text-[10px] font-semibold text-sky-700">
+              <div className="text-[11px] font-semibold text-sky-700">
                 {selectedLocation.region ? `${selectedLocation.region}, ` : ''}
                 {selectedLocation.country || 'North Queensland'}
                 {' · '}
@@ -142,12 +142,12 @@ export function WeatherMarkers({
             {/* 4-Model Consensus Snapshot */}
             {multiModelBundle && (
               <div className="space-y-1.5 text-[11px] tabular-nums">
-                <div className="flex items-center justify-between text-[10px] font-semibold text-slate-500">
+                <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500">
                   <span>Today Consensus</span>
                   <span className="text-slate-700">{multiModelBundle.spreadOverview.agreementLabel}</span>
                 </div>
                 {todayRow && (
-                  <div className="grid grid-cols-2 gap-1.5 bg-slate-50 border border-slate-200 rounded-lg p-2 font-mono text-[10px]">
+                  <div className="grid grid-cols-2 gap-1.5 bg-slate-50 border border-slate-200 rounded-lg p-2 font-mono text-[11px]">
                     <div>
                       <span className="text-slate-500 font-sans">WN2:</span>{' '}
                       <span className="font-bold text-slate-900">
@@ -178,7 +178,7 @@ export function WeatherMarkers({
                     </div>
                   </div>
                 )}
-                <div className="flex items-center justify-between text-[10px] text-slate-500 pt-1 border-t border-slate-100">
+                <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-100">
                   <span>
                     24h Rain Mean: <strong className="text-slate-800">{multiModelBundle.spreadOverview.peak24hRainConsensusMm ?? 0} mm</strong>
                   </span>
@@ -211,7 +211,7 @@ export function WeatherMarkers({
               setShowInfoWindow(true);
             }}
           >
-            <div className="px-2.5 py-1 rounded-lg bg-[#141416]/90 backdrop-blur-md border border-white/15 shadow-lg text-[10px] font-semibold text-white hover:bg-[#1d334a] hover:border-[#32ADE6]/60 transition-colors cursor-pointer flex items-center gap-1.5">
+            <div className="px-2.5 py-1 rounded-lg bg-[#141416]/90 backdrop-blur-md border border-white/15 shadow-lg text-[11px] font-semibold text-white hover:bg-[#1d334a] hover:border-[#32ADE6]/60 transition-colors cursor-pointer flex items-center gap-1.5">
               <CloudRain className="w-2.5 h-2.5 text-[#32ADE6]" />
               <span>{station.name.split('/')[0].trim()}</span>
             </div>

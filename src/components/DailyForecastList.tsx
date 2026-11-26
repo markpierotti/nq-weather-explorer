@@ -80,11 +80,11 @@ export function DailyForecastList({ daily }: DailyForecastListProps) {
               <div className="flex items-center gap-1.5 w-16">
                 {getConditionIcon(condType)}
                 {precipProb > 25 ? (
-                  <span className="text-[10px] font-bold text-sky-600">
+                  <span className="text-[11px] font-bold text-sky-600">
                     {precipProb}%
                   </span>
                 ) : (
-                  <span className="text-[10px] text-slate-400">--</span>
+                  <span className="text-[11px] text-slate-400">--</span>
                 )}
               </div>
 

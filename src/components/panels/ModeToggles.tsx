@@ -72,7 +72,7 @@ export function ModeToggles() {
         <div className="bg-[#ff3b30] text-white px-4 py-2.5 rounded-xl flex items-center justify-between gap-2 text-xs font-semibold animate-pulse">
           <div className="min-w-0">
             <div className="truncate">Tropical Low / Flood Warning</div>
-            <div className="text-[10px] text-white/80 font-normal truncate">{threatDetection.reasons[0]}</div>
+            <div className="text-[11px] text-white/80 font-normal truncate">{threatDetection.reasons[0]}</div>
           </div>
           <button
             type="button"
@@ -89,7 +89,7 @@ export function ModeToggles() {
         <div className={rowClass} onClick={(e) => e.target === e.currentTarget && onToggleEmergencyDashboard()}>
           <span className="text-xs lg:text-[11px] font-medium text-white/80 truncate flex items-center gap-1.5 pointer-events-none">
             <ShieldAlert
-              className={`w-3.5 h-3.5 shrink-0 ${emergencyDashboardEnabled ? 'text-[#ff9500]' : 'text-white/40'}`}
+              className={`w-3.5 h-3.5 shrink-0 ${emergencyDashboardEnabled ? 'text-[#ff9500]' : 'text-white/60'}`}
             />
             <span>Emergency</span>
           </span>
@@ -104,7 +104,7 @@ export function ModeToggles() {
 
         <div className={rowClass} onClick={(e) => e.target === e.currentTarget && onToggleCycloneMode()}>
           <span className="text-xs lg:text-[11px] font-medium text-white/80 truncate flex items-center gap-1.5 pointer-events-none">
-            <Wind className={`w-3.5 h-3.5 shrink-0 ${cycloneMode ? 'text-[#ff3b30]' : 'text-white/45'}`} />
+            <Wind className={`w-3.5 h-3.5 shrink-0 ${cycloneMode ? 'text-[#ff3b30]' : 'text-white/60'}`} />
             <span>Cyclone WN3</span>
           </span>
           <IosSwitch

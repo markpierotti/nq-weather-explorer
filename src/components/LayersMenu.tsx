@@ -40,7 +40,7 @@ interface LayersMenuProps {
 }
 
 function SectionTitle({ children }: { children: ReactNode }) {
-  return <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-white/50 mb-2">{children}</div>;
+  return <div className="font-mono text-[11px] uppercase tracking-[0.1em] text-white/60 mb-2">{children}</div>;
 }
 
 function LayersMenuBody({ mapTypeId, onChangeMapType, onQuickView }: LayersMenuProps) {
@@ -135,7 +135,7 @@ function LayersMenuBody({ mapTypeId, onChangeMapType, onQuickView }: LayersMenuP
           ))}
         </div>
         {!emergencyDashboardEnabled && (
-          <p className="text-[11px] text-white/50 mt-1">Turn on the dashboard to load emergency feeds.</p>
+          <p className="text-[11px] text-white/60 mt-1">Turn on the dashboard to load emergency feeds.</p>
         )}
       </section>
 

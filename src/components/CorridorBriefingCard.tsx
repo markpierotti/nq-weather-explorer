@@ -97,14 +97,14 @@ function GroundingStatusBar({
     <div className="space-y-1.5 pt-2 border-t border-white/10">
       <div className="flex flex-wrap items-center gap-1.5">
         {grounding?.checked && grounding.passed && (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-mono bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
             <ShieldCheck className="w-3 h-3 shrink-0" />
             <span>Verified against live feeds{scorePct !== null ? ` (${scorePct}%)` : ''}</span>
           </span>
         )}
 
         {grounding?.checked && !grounding.passed && (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono bg-amber-500/15 text-amber-200 border border-amber-500/35">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-mono bg-amber-500/15 text-amber-200 border border-amber-500/35">
             <ShieldAlert className="w-3 h-3 shrink-0" />
             <span>
               Grounding check flagged ({scorePct !== null ? `${scorePct}%` : 'low'})
@@ -114,7 +114,7 @@ function GroundingStatusBar({
 
         {feedHealth && feedHealth.length > 0 && (
           <span
-            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono border ${
+            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-mono border ${
               degradedFeeds.length > 0
                 ? 'bg-amber-500/10 text-amber-200 border-amber-500/30'
                 : 'bg-white/[0.05] text-white/65 border-white/10'
@@ -134,7 +134,7 @@ function GroundingStatusBar({
         )}
       </div>
 
-      <p className="text-[10px] text-white/45 leading-snug">
+      <p className="text-[11px] text-white/60 leading-snug">
         Verify live conditions on QLDTraffic &amp; BOM before travelling — never drive through floodwater.
       </p>
     </div>
@@ -458,11 +458,11 @@ export function CorridorBriefingCard({
     <div className="ios-bento-card p-4 space-y-3">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-white/50 flex items-center gap-1.5">
+          <div className="font-mono text-[11px] uppercase tracking-[0.1em] text-white/60 flex items-center gap-1.5">
             <Sparkles className="w-3.5 h-3.5 text-[#32ADE6]" />
             <span>AI Corridor Briefing</span>
           </div>
-          <p className="text-[11px] text-white/55 mt-1">
+          <p className="text-[11px] text-white/65 mt-1">
             Live-feed grounded synthesis · QLDTraffic + BOM + Gauges
           </p>
         </div>
@@ -471,7 +471,7 @@ export function CorridorBriefingCard({
           type="button"
           onClick={handleGenerateBriefing}
           disabled={isLoading}
-          className="px-3 py-1.5 rounded-[10px] bg-[#32ADE6] hover:bg-[#4cbdf0] disabled:bg-white/15 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+          className="px-3 py-1.5 rounded-[10px] bg-[#32ADE6] hover:bg-[#4cbdf0] disabled:bg-white/15 text-[#111113] disabled:text-white text-xs font-semibold flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
           <span>{briefing ? 'Refresh' : 'Generate'}</span>
@@ -507,7 +507,7 @@ export function CorridorBriefingCard({
               {/* Overall risk + headline */}
               <div className="flex items-start gap-2 rounded-xl bg-white/[0.04] border border-white/[0.07] p-2.5">
                 <span
-                  className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold uppercase tracking-wider border shrink-0 mt-0.5 ${RISK_STYLES[structured.overallRisk].badge}`}
+                  className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-mono font-semibold uppercase tracking-wider border shrink-0 mt-0.5 ${RISK_STYLES[structured.overallRisk].badge}`}
                 >
                   <span
                     className={`w-1.5 h-1.5 rounded-full ${RISK_STYLES[structured.overallRisk].dot}`}
@@ -537,7 +537,7 @@ export function CorridorBriefingCard({
                           {section.title}
                         </span>
                         <span
-                          className={`px-1.5 py-0.5 rounded-md text-[9px] font-mono font-semibold uppercase border shrink-0 ${riskStyle.badge}`}
+                          className={`px-1.5 py-0.5 rounded-md text-[11px] font-mono font-semibold uppercase border shrink-0 ${riskStyle.badge}`}
                         >
                           {section.risk}
                         </span>
@@ -573,7 +573,7 @@ export function CorridorBriefingCard({
               {/* Action items */}
               {structured.actions.length > 0 && (
                 <div className="rounded-xl bg-[#32ADE6]/[0.08] border border-[#32ADE6]/25 p-2.5 space-y-1.5">
-                  <div className="text-[10px] font-mono uppercase tracking-wider text-[#32ADE6] flex items-center gap-1">
+                  <div className="text-[11px] font-mono uppercase tracking-wider text-[#32ADE6] flex items-center gap-1">
                     <CheckCircle2 className="w-3 h-3" />
                     <span>Next-24h Actions</span>
                   </div>
@@ -601,8 +601,8 @@ export function CorridorBriefingCard({
 
           {briefing.citations.length > 0 && (
             <div className="pt-2.5 border-t border-white/10 space-y-1">
-              <div className="text-[10px] font-mono uppercase tracking-wider text-white/50 flex items-center gap-1">
-                <Globe className="w-3 h-3 text-white/45" />
+              <div className="text-[11px] font-mono uppercase tracking-wider text-white/60 flex items-center gap-1">
+                <Globe className="w-3 h-3 text-white/60" />
                 <span>Search Grounding Sources</span>
               </div>
               <div className="flex flex-wrap gap-x-3 gap-y-1">
@@ -627,7 +627,7 @@ export function CorridorBriefingCard({
             feedHealth={briefing.feedHealth}
           />
 
-          <div className="text-[10px] font-mono text-white/40 flex items-center justify-between pt-2 border-t border-white/10 tabular-nums">
+          <div className="text-[11px] font-mono text-white/60 flex items-center justify-between pt-2 border-t border-white/10 tabular-nums">
             <span>{briefing.model}</span>
             <span>
               {new Date(briefing.generatedAt).toLocaleTimeString('en-AU', {
@@ -652,9 +652,9 @@ export function CorridorBriefingCard({
             <MessageSquare className="w-3.5 h-3.5 text-[#32ADE6]" />
             <span>Ask a corridor question</span>
             {chatOpen ? (
-              <ChevronUp className="w-3.5 h-3.5 text-white/50" />
+              <ChevronUp className="w-3.5 h-3.5 text-white/60" />
             ) : (
-              <ChevronDown className="w-3.5 h-3.5 text-white/50" />
+              <ChevronDown className="w-3.5 h-3.5 text-white/60" />
             )}
           </button>
 
@@ -662,7 +662,7 @@ export function CorridorBriefingCard({
             <button
               type="button"
               onClick={handleClearChat}
-              className="text-[11px] text-white/45 hover:text-white/80 inline-flex items-center gap-1 cursor-pointer"
+              className="text-[11px] text-white/60 hover:text-white/80 inline-flex items-center gap-1 cursor-pointer"
               title="Clear follow-up chat"
             >
               <Trash2 className="w-3 h-3" />
@@ -704,7 +704,7 @@ export function CorridorBriefingCard({
                       {turn.text ? (
                         renderBoldMarkdown(turn.text)
                       ) : (
-                        <span className="text-white/45 italic">Checking live feeds…</span>
+                        <span className="text-white/60 italic">Checking live feeds…</span>
                       )}
                       {turn.isStreaming && turn.text && (
                         <span className="inline-block w-1.5 h-3 bg-[#32ADE6] ml-0.5 align-middle animate-pulse" />
@@ -719,7 +719,7 @@ export function CorridorBriefingCard({
                             href={c.uri}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-[10px] text-[#32ADE6] hover:underline inline-flex items-center gap-0.5 max-w-[180px] truncate"
+                            className="text-[11px] text-[#32ADE6] hover:underline inline-flex items-center gap-0.5 max-w-[180px] truncate"
                           >
                             <span className="truncate">{c.title}</span>
                             <ExternalLink className="w-2.5 h-2.5 shrink-0" />
@@ -756,12 +756,12 @@ export function CorridorBriefingCard({
                 onChange={(e) => setChatInput(e.target.value)}
                 disabled={isChatStreaming}
                 placeholder={`Ask about ${selectedLocation.name}…`}
-                className="flex-1 min-w-0 rounded-xl bg-white/[0.06] border border-white/[0.1] px-3 py-1.5 text-xs text-white placeholder:text-white/40 focus:outline-none focus:border-[#32ADE6]/60"
+                className="flex-1 min-w-0 rounded-xl bg-white/[0.06] border border-white/[0.1] px-3 py-1.5 text-xs text-white placeholder:text-white/60 focus:outline-none focus:border-[#32ADE6]/60"
               />
               <button
                 type="submit"
                 disabled={isChatStreaming || !chatInput.trim()}
-                className="p-2 rounded-xl bg-[#32ADE6] hover:bg-[#4cbdf0] disabled:bg-white/10 disabled:text-white/30 text-white transition-colors shrink-0 cursor-pointer"
+                className="p-2 rounded-xl bg-[#32ADE6] hover:bg-[#4cbdf0] disabled:bg-white/10 disabled:text-white/30 text-[#111113] transition-colors shrink-0 cursor-pointer"
                 aria-label="Send follow-up question"
               >
                 <Send className="w-3.5 h-3.5" />

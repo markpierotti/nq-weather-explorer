@@ -152,7 +152,7 @@ export function PlaceAutocompleteNew({
     <div className={`places-ui-kit-wrapper relative w-full ${className}`}>
       {!isReady && (
         <div className="flex items-center gap-2 px-3 py-2 rounded-[10px] bg-white/10 border border-white/10 text-xs text-white/60">
-          <Search className="w-3.5 h-3.5 text-white/50" />
+          <Search className="w-3.5 h-3.5 text-white/60" />
           <span className="truncate">{placeholder}</span>
           <Loader2 className="w-3.5 h-3.5 animate-spin text-[#32ADE6] ml-auto" />
         </div>

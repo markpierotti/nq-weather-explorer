@@ -39,7 +39,7 @@ export function AtmosphericMetricsGrid({ current, unitSystem }: AtmosphericMetri
   return (
     <div className="grid grid-cols-2 gap-3 tabular-nums">
       <div className="ios-bento-card p-3.5 flex flex-col justify-between">
-        <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.1em] text-white/50">
+        <div className="flex items-center justify-between font-mono text-[11px] uppercase tracking-[0.1em] text-white/60">
           <span className="flex items-center gap-1.5">
             <CloudRain className="w-3.5 h-3.5 text-[#32ADE6]" /> Precip
           </span>
@@ -60,7 +60,7 @@ export function AtmosphericMetricsGrid({ current, unitSystem }: AtmosphericMetri
       </div>
 
       <div className="ios-bento-card p-3.5 flex flex-col justify-between">
-        <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.1em] text-white/50">
+        <div className="flex items-center justify-between font-mono text-[11px] uppercase tracking-[0.1em] text-white/60">
           <span className="flex items-center gap-1.5">
             <Wind className="w-3.5 h-3.5 text-[#32ADE6]" /> Wind
           </span>
@@ -71,28 +71,28 @@ export function AtmosphericMetricsGrid({ current, unitSystem }: AtmosphericMetri
             {windSpeed}
             <span className="text-xs font-normal text-white/60 ml-1">{isMetric ? 'km/h' : 'mph'}</span>
           </div>
-          <div className="text-[11px] text-white/55 mt-1">
+          <div className="text-[11px] text-white/65 mt-1">
             {windGust ? `Gusts ${windGust} ${isMetric ? 'km/h' : 'mph'}` : 'Steady flow'}
           </div>
         </div>
       </div>
 
       <div className="ios-bento-card p-3.5 flex flex-col justify-between">
-        <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.1em] text-white/50">
+        <div className="flex items-center justify-between font-mono text-[11px] uppercase tracking-[0.1em] text-white/60">
           <span className="flex items-center gap-1.5">
             <Droplets className="w-3.5 h-3.5 text-[#32ADE6]" /> Humidity
           </span>
         </div>
         <div className="mt-2.5">
           <div className="text-xl font-semibold text-white">{humidity}%</div>
-          <div className="text-[11px] text-white/55 mt-1">
+          <div className="text-[11px] text-white/65 mt-1">
             {dewPoint !== undefined ? `Dew point ${dewPoint}°${isMetric ? 'C' : 'F'}` : 'Normal moisture'}
           </div>
         </div>
       </div>
 
       <div className="ios-bento-card p-3.5 flex flex-col justify-between">
-        <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.1em] text-white/50">
+        <div className="flex items-center justify-between font-mono text-[11px] uppercase tracking-[0.1em] text-white/60">
           <span className="flex items-center gap-1.5">
             <Sun className="w-3.5 h-3.5 text-[#ff9500]" /> UV Index
           </span>
@@ -102,12 +102,12 @@ export function AtmosphericMetricsGrid({ current, unitSystem }: AtmosphericMetri
         </div>
         <div className="mt-2.5 flex items-baseline gap-1">
           <span className="text-xl font-semibold text-white">{uv}</span>
-          <span className="text-xs text-white/45">/ 11+</span>
+          <span className="text-xs text-white/60">/ 11+</span>
         </div>
       </div>
 
       <div className="ios-bento-card p-3.5 flex flex-col justify-between">
-        <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.1em] text-white/50">
+        <div className="flex items-center justify-between font-mono text-[11px] uppercase tracking-[0.1em] text-white/60">
           <span className="flex items-center gap-1.5">
             <Cloud className="w-3.5 h-3.5 text-indigo-400" /> Cloud
           </span>
@@ -120,12 +120,12 @@ export function AtmosphericMetricsGrid({ current, unitSystem }: AtmosphericMetri
               style={{ width: `${Math.max(5, cloudCover)}%` }}
             />
           </div>
-          <div className="text-[11px] text-white/55 mt-1.5">Sky coverage</div>
+          <div className="text-[11px] text-white/65 mt-1.5">Sky coverage</div>
         </div>
       </div>
 
       <div className="ios-bento-card p-3.5 flex flex-col justify-between">
-        <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.1em] text-white/50">
+        <div className="flex items-center justify-between font-mono text-[11px] uppercase tracking-[0.1em] text-white/60">
           <span className="flex items-center gap-1.5">
             <Gauge className="w-3.5 h-3.5 text-[#34c759]" /> Pressure
           </span>
@@ -134,8 +134,8 @@ export function AtmosphericMetricsGrid({ current, unitSystem }: AtmosphericMetri
           <div className="text-xl font-semibold text-white">
             {pressure} <span className="text-xs font-normal text-white/60">hPa</span>
           </div>
-          <div className="text-[11px] text-white/55 mt-1 flex items-center gap-1">
-            <Eye className="w-3 h-3 text-white/45" /> Vis: {visibility} {isMetric ? 'km' : 'mi'}
+          <div className="text-[11px] text-white/65 mt-1 flex items-center gap-1">
+            <Eye className="w-3 h-3 text-white/60" /> Vis: {visibility} {isMetric ? 'km' : 'mi'}
           </div>
         </div>
       </div>

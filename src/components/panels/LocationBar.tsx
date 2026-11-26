@@ -46,7 +46,7 @@ export function LocationSearchRow({ isAddOpen, onToggleAdd, trailing }: Location
         type="button"
         onClick={onToggleAdd}
         className={`h-11 lg:h-9 px-3 lg:px-2.5 rounded-[10px] text-xs font-semibold flex items-center gap-1 whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
-          isAddOpen ? 'bg-[#32ADE6] text-white' : 'bg-white/10 hover:bg-white/15 text-white'
+          isAddOpen ? 'bg-[#32ADE6] text-[#111113]' : 'bg-white/10 hover:bg-white/15 text-white'
         }`}
         title="Add & save a location"
         aria-expanded={isAddOpen}
@@ -71,7 +71,7 @@ export function LocationSearchRow({ isAddOpen, onToggleAdd, trailing }: Location
 }
 
 const inputClass =
-  'w-full px-2.5 py-2.5 lg:py-1.5 text-base lg:text-xs rounded-lg border border-white/15 bg-white/10 text-white placeholder:text-white/40 focus:outline-none focus:border-[#32ADE6]';
+  'w-full px-2.5 py-2.5 lg:py-1.5 text-base lg:text-xs rounded-lg border border-white/15 bg-white/10 text-white placeholder:text-white/60 focus:outline-none focus:border-[#32ADE6]';
 
 /** Expandable "Add location" form: Places search, save-current, or raw coordinates. */
 export function AddLocationForm({ onClose }: { onClose: () => void }) {
@@ -114,7 +114,7 @@ export function AddLocationForm({ onClose }: { onClose: () => void }) {
         <button
           type="button"
           onClick={onClose}
-          className="w-11 h-11 -m-3 lg:w-auto lg:h-auto lg:m-0 lg:p-0.5 flex items-center justify-center rounded text-white/50 hover:text-white cursor-pointer"
+          className="w-11 h-11 -m-3 lg:w-auto lg:h-auto lg:m-0 lg:p-0.5 flex items-center justify-center rounded text-white/60 hover:text-white cursor-pointer"
           aria-label="Close Add Location form"
         >
           <X className="w-4 h-4 lg:w-3.5 lg:h-3.5" />
@@ -122,7 +122,7 @@ export function AddLocationForm({ onClose }: { onClose: () => void }) {
       </div>
 
       <div>
-        <div className="text-[10px] font-mono uppercase tracking-wider text-white/50 mb-1">Search a town or place</div>
+        <div className="text-[11px] font-mono uppercase tracking-wider text-white/60 mb-1">Search a town or place</div>
         <PlaceAutocompleteNew
           onSelectLocation={addAndClose}
           placeholder="Type place name (e.g. Home Hill, Giru, Bowen)…"
@@ -141,7 +141,7 @@ export function AddLocationForm({ onClose }: { onClose: () => void }) {
       )}
 
       <form onSubmit={handleSubmit} className="pt-2 border-t border-white/10 space-y-2">
-        <div className="text-[10px] font-mono uppercase tracking-wider text-white/50">Or enter custom coordinates</div>
+        <div className="text-[11px] font-mono uppercase tracking-wider text-white/60">Or enter custom coordinates</div>
         <input
           type="text"
           value={customName}
@@ -191,7 +191,7 @@ export function AddLocationForm({ onClose }: { onClose: () => void }) {
           </button>
           <button
             type="submit"
-            className="min-h-11 lg:min-h-0 px-3 py-1 rounded-lg bg-[#32ADE6] hover:bg-[#4cbdf0] text-white text-xs font-semibold cursor-pointer"
+            className="min-h-11 lg:min-h-0 px-3 py-1 rounded-lg bg-[#32ADE6] hover:bg-[#4cbdf0] text-[#111113] text-xs font-semibold cursor-pointer"
           >
             Save Coordinates
           </button>
@@ -207,7 +207,7 @@ export function LocationChips() {
   const chipBase =
     'rounded-lg text-xs lg:text-[11px] font-medium whitespace-nowrap shrink-0 transition-colors';
   const chipState = (selected: boolean) =>
-    selected ? 'bg-[#32ADE6] text-white font-semibold' : 'bg-white/[0.08] text-white/75 hover:bg-white/15 hover:text-white';
+    selected ? 'bg-[#32ADE6] text-[#111113] font-semibold' : 'bg-white/[0.08] text-white/75 hover:bg-white/15 hover:text-white';
 
   return (
     <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar select-none">
@@ -237,7 +237,7 @@ export function LocationChips() {
               type="button"
               onClick={() => onRemoveSavedLocation(loc.id)}
               className={`min-h-11 min-w-9 lg:min-h-0 lg:min-w-0 flex items-center justify-center pr-2 pl-0.5 py-1 cursor-pointer ${
-                isSelected ? 'text-white/80 hover:text-white' : 'text-white/45 hover:text-[#ff3b30]'
+                isSelected ? 'text-[#111113]/70 hover:text-[#111113]' : 'text-white/60 hover:text-[#ff3b30]'
               }`}
               title={`Remove ${loc.name}`}
               aria-label={`Remove ${loc.name}`}

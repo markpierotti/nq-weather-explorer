@@ -54,7 +54,7 @@ export function SummaryWidgets({
   const uvVal = hasUv ? Math.max(0, rawUv) : null;
   const uvDisplay =
     uvVal !== null ? (Number.isInteger(uvVal) ? String(uvVal) : uvVal.toFixed(1)) : '—';
-  const uvMeta = uvVal !== null ? getUvMeta(uvVal) : { label: 'Unavailable', colorClass: 'text-white/45' };
+  const uvMeta = uvVal !== null ? getUvMeta(uvVal) : { label: 'Unavailable', colorClass: 'text-white/60' };
   const uvPct = uvVal !== null ? Math.min(100, Math.max(4, (uvVal / 12) * 100)) : 0;
 
   // 2. Humidity & Dew Point
@@ -108,7 +108,7 @@ export function SummaryWidgets({
     <section aria-label="Summary Widgets" className="grid grid-cols-3 gap-2.5 tabular-nums">
       {/* Quick-Access Card 1: UV Index */}
       <div className="ios-bento-card p-3 flex flex-col justify-between min-w-0">
-        <div className="font-mono text-[10px] uppercase tracking-[0.06em] text-white/50 flex items-center gap-1 whitespace-nowrap">
+        <div className="font-mono text-[11px] uppercase tracking-normal text-white/60 flex items-center gap-1 whitespace-nowrap">
           <Sun className="w-3.5 h-3.5 text-[#ff9500] shrink-0" />
           <span className="truncate">UV Index</span>
         </div>
@@ -132,7 +132,7 @@ export function SummaryWidgets({
 
       {/* Quick-Access Card 2: Humidity */}
       <div className="ios-bento-card p-3 flex flex-col justify-between min-w-0">
-        <div className="font-mono text-[10px] uppercase tracking-[0.06em] text-white/50 flex items-center gap-1 whitespace-nowrap">
+        <div className="font-mono text-[11px] uppercase tracking-normal text-white/60 flex items-center gap-1 whitespace-nowrap">
           <Droplets className="w-3.5 h-3.5 text-[#32ADE6] shrink-0" />
           <span className="truncate">Humidity</span>
         </div>
@@ -156,9 +156,9 @@ export function SummaryWidgets({
 
       {/* Quick-Access Card 3: Wind Speed */}
       <div className="ios-bento-card p-3 flex flex-col justify-between min-w-0">
-        <div className="font-mono text-[10px] uppercase tracking-[0.06em] text-white/50 flex items-center gap-1 whitespace-nowrap">
+        <div className="font-mono text-[11px] uppercase tracking-normal text-white/60 flex items-center gap-1 whitespace-nowrap">
           <Wind className="w-3.5 h-3.5 text-[#32ADE6] shrink-0" />
-          <span className="truncate">Wind Speed</span>
+          <span className="truncate">Wind</span>
         </div>
 
         <div className="mt-2">
@@ -181,10 +181,10 @@ export function SummaryWidgets({
           </div>
         </div>
 
-        <div className="mt-2 pt-1.5 border-t border-white/10 flex items-center justify-between text-[10px] font-mono text-white/65">
+        <div className="mt-2 pt-1.5 border-t border-white/10 flex items-center justify-between text-[11px] font-mono text-white/65">
           <span>{windCardinal || 'CALM'}</span>
           {windDegrees !== null && (
-            <span className="inline-flex items-center gap-1 text-white/50">
+            <span className="inline-flex items-center gap-1 text-white/60">
               <Navigation
                 className="w-2.5 h-2.5 text-[#32ADE6]"
                 style={{ transform: `rotate(${(windDegrees + 180) % 360}deg)` }}

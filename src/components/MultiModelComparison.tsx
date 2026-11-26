@@ -79,7 +79,7 @@ export function MultiModelComparison({
         <button
           type="button"
           onClick={onRefresh}
-          className="px-3 py-1.5 rounded-[10px] bg-[#32ADE6] text-white font-semibold hover:bg-[#4cbdf0] cursor-pointer"
+          className="px-3 py-1.5 rounded-[10px] bg-[#32ADE6] text-[#111113] font-semibold hover:bg-[#4cbdf0] cursor-pointer"
         >
           Retry
         </button>
@@ -189,7 +189,7 @@ export function MultiModelComparison({
       <div className="ios-bento-card p-4">
         <div className="flex items-start justify-between gap-2">
           <div>
-            <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-white/50 flex items-center gap-1.5">
+            <div className="font-mono text-[11px] uppercase tracking-[0.1em] text-white/60 flex items-center gap-1.5">
               <BarChart3 className="w-3.5 h-3.5 text-[#32ADE6] shrink-0" />
               <span>Consensus Spread</span>
             </div>
@@ -214,13 +214,13 @@ export function MultiModelComparison({
 
         <div className="grid grid-cols-3 gap-2 mt-3.5 pt-3 border-t border-white/10 text-xs tabular-nums">
           <div>
-            <div className="text-[10px] text-white/50">Avg Max Δ</div>
+            <div className="text-[11px] text-white/60">Avg Max Δ</div>
             <div className="font-mono font-semibold text-sm text-white mt-0.5">
               {fmtTempDelta(spreadOverview.avgTempSpreadC)}
             </div>
           </div>
           <div>
-            <div className="text-[10px] text-white/50">Peak 7d Rain Δ</div>
+            <div className="text-[11px] text-white/60">Peak 7d Rain Δ</div>
             <div className="font-mono font-semibold text-sm text-white mt-0.5">
               {spreadOverview.maxRainSpreadMm !== null
                 ? `${fmtRain(spreadOverview.maxRainSpreadMm)} ${isMetric ? 'mm' : 'in'}`
@@ -228,7 +228,7 @@ export function MultiModelComparison({
             </div>
           </div>
           <div>
-            <div className="text-[10px] text-white/50">24h Mean Rain</div>
+            <div className="text-[11px] text-white/60">24h Mean Rain</div>
             <div className="font-mono font-semibold text-sm text-[#32ADE6] mt-0.5">
               {spreadOverview.peak24hRainConsensusMm !== null
                 ? `${fmtRain(spreadOverview.peak24hRainConsensusMm)} ${isMetric ? 'mm' : 'in'}`
@@ -237,7 +237,7 @@ export function MultiModelComparison({
           </div>
         </div>
 
-        <div className="mt-3 pt-2.5 border-t border-white/10 text-[10px] flex flex-wrap items-center gap-x-2 gap-y-1 text-white/60">
+        <div className="mt-3 pt-2.5 border-t border-white/10 text-[11px] flex flex-wrap items-center gap-x-2 gap-y-1 text-white/60">
           {cycloneMode && (
             <>
               <span className="font-semibold text-[#ff3b30]">
@@ -278,7 +278,7 @@ export function MultiModelComparison({
       <div className="ios-bento-card p-4 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-white/50">
+            <div className="font-mono text-[11px] uppercase tracking-[0.1em] text-white/60">
               Next 24h · 3-Hourly
             </div>
             <p className="text-[11px] text-white/65 mt-0.5">
@@ -293,7 +293,7 @@ export function MultiModelComparison({
                 type="button"
                 onClick={() => setHourlyMetric(m)}
                 className={`px-2.5 py-1 rounded-md font-medium whitespace-nowrap shrink-0 cursor-pointer transition-colors ${
-                  hourlyMetric === m ? 'bg-[#32ADE6] text-white font-semibold' : 'text-white/65 hover:text-white'
+                  hourlyMetric === m ? 'bg-[#32ADE6] text-[#111113] font-semibold' : 'text-white/65 hover:text-white'
                 }`}
               >
                 {m === 'rain' ? 'Rain' : m === 'temp' ? 'Temp' : 'Wind'}
@@ -343,7 +343,7 @@ export function MultiModelComparison({
             })}
           </svg>
 
-          <div className="flex flex-wrap items-center justify-center gap-3 mt-2 text-[10px] text-white/70">
+          <div className="flex flex-wrap items-center justify-center gap-3 mt-2 text-[11px] text-white/70">
             {wn3Bundle && (
               <span className="flex items-center gap-1.5 font-semibold text-[#ff3b30]">
                 <span className="w-3 h-0.5 bg-[#ff3b30] inline-block" /> WN3
@@ -365,7 +365,7 @@ export function MultiModelComparison({
         <div className="overflow-x-auto">
           <table className="w-full text-[11px] tabular-nums border-collapse">
             <thead>
-              <tr className="border-b border-white/10 text-white/50 text-left">
+              <tr className="border-b border-white/10 text-white/60 text-left">
                 <th className="py-1.5 pr-1.5 font-medium">Time</th>
                 {wn3Bundle && (
                   <th className="py-1.5 px-1 font-semibold text-right text-[#ff3b30]">WN3</th>
@@ -409,7 +409,7 @@ export function MultiModelComparison({
                     <td className="py-1.5 px-1 text-right text-white">{renderCell(row.weatherNext2)}</td>
                     <td className="py-1.5 px-1 text-right text-white/80">{renderCell(row.ecmwf)}</td>
                     <td className="py-1.5 px-1 text-right text-white/80">{renderCell(row.gfs)}</td>
-                    <td className="py-1.5 pl-1 text-right text-white/50">{spreadStr}</td>
+                    <td className="py-1.5 pl-1 text-right text-white/60">{spreadStr}</td>
                   </tr>
                 );
               })}
@@ -422,7 +422,7 @@ export function MultiModelComparison({
       <div className="ios-bento-card p-4 space-y-2.5">
         <div className="flex items-center justify-between gap-2">
           <div>
-            <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-white/50 flex items-center gap-1.5">
+            <div className="font-mono text-[11px] uppercase tracking-[0.1em] text-white/60 flex items-center gap-1.5">
               <Layers className="w-3.5 h-3.5 text-[#32ADE6]" />
               <span>{wn3Bundle ? '10-Day 5-System Matrix' : '7-Day 4-System Matrix'}</span>
             </div>
@@ -431,7 +431,7 @@ export function MultiModelComparison({
             </p>
           </div>
           {cycloneMode && (
-            <span className="text-[10px] font-semibold text-[#ff3b30] flex items-center gap-1 shrink-0">
+            <span className="text-[11px] font-semibold text-[#ff3b30] flex items-center gap-1 shrink-0">
               <Wind className="w-3 h-3" />
               WN3 Active
             </span>
@@ -441,7 +441,7 @@ export function MultiModelComparison({
         <div className="overflow-x-auto">
           <table className="w-full text-[11px] tabular-nums border-collapse">
             <thead>
-              <tr className="border-b border-white/10 text-white/50 text-left">
+              <tr className="border-b border-white/10 text-white/60 text-left">
                 <th className="py-1.5 pr-1.5 font-medium">Day</th>
                 {showWn3Column && (
                   <th className="py-1.5 px-1 font-semibold text-right text-[#ff3b30] bg-[#ff3b30]/10">
@@ -465,7 +465,7 @@ export function MultiModelComparison({
                       <span className="text-white font-medium">
                         {fmtTemp(m.minTemp)}/{fmtTemp(m.maxTemp)}
                       </span>
-                      <span className={`text-[10px] ${(m.rainMm ?? 0) >= 5 ? 'text-[#32ADE6] font-semibold' : 'text-white/55'}`}>
+                      <span className={`text-[11px] ${(m.rainMm ?? 0) >= 5 ? 'text-[#32ADE6] font-semibold' : 'text-white/65'}`}>
                         {m.rainMm !== null && m.rainMm !== undefined ? `${fmtRain(m.rainMm)}${isMetric ? 'mm' : 'in'}` : '—'}
                       </span>
                     </div>
@@ -497,7 +497,7 @@ export function MultiModelComparison({
                     <td className="py-2 pr-1.5">
                       <div className="font-semibold text-white whitespace-nowrap">{day.dayLabel}</div>
                       {(wn3Day?.shortText || day.bom?.shortText) && (
-                        <div className="text-[10px] text-white/50 line-clamp-1 max-w-[85px]" title={wn3Day?.shortText || day.bom?.shortText}>
+                        <div className="text-[11px] text-white/60 line-clamp-1 max-w-[85px]" title={wn3Day?.shortText || day.bom?.shortText}>
                           {wn3Day?.shortText || day.bom?.shortText}
                         </div>
                       )}
@@ -510,27 +510,27 @@ export function MultiModelComparison({
                             <span className="text-white font-semibold">
                               {fmtTemp(wn3Day.minTemp)}/{fmtTemp(wn3Day.maxTemp)}
                             </span>
-                            <span className={`text-[10px] ${(wn3Day.rainMm ?? 0) >= 5 ? 'text-[#32ADE6] font-semibold' : 'text-white/60'}`}>
+                            <span className={`text-[11px] ${(wn3Day.rainMm ?? 0) >= 5 ? 'text-[#32ADE6] font-semibold' : 'text-white/60'}`}>
                               {wn3Day.rainMm !== null ? `${fmtRain(wn3Day.rainMm)}${isMetric ? 'mm' : 'in'}` : '—'}
                             </span>
                             {wn3Day.peakGustKmh !== null && (
-                              <span className={`text-[9px] ${wn3Day.peakGustKmh >= 65 ? 'text-[#ff3b30] font-semibold' : 'text-white/50'}`}>
+                              <span className={`text-[11px] ${wn3Day.peakGustKmh >= 65 ? 'text-[#ff3b30] font-semibold' : 'text-white/60'}`}>
                                 G {fmtWind(wn3Day.peakGustKmh)}{isMetric ? 'km/h' : 'mph'}
                               </span>
                             )}
                             {wn3Day.minPressureMb !== null && (
-                              <span className="text-[9px] text-indigo-300">
+                              <span className="text-[11px] text-indigo-300">
                                 {Math.round(wn3Day.minPressureMb)}hPa
                               </span>
                             )}
                             {wn3Day.peakThunderstormPct !== null && wn3Day.peakThunderstormPct > 0 && (
-                              <span className="text-[9px] text-[#ff9500] font-semibold">
+                              <span className="text-[11px] text-[#ff9500] font-semibold">
                                 ⚡ {wn3Day.peakThunderstormPct}%
                               </span>
                             )}
                           </div>
                         ) : (
-                          <span className="text-[10px] text-rose-300 font-sans">AI Synth</span>
+                          <span className="text-[11px] text-rose-300 font-sans">AI Synth</span>
                         )}
                       </td>
                     )}
@@ -543,7 +543,7 @@ export function MultiModelComparison({
                       <div className="flex flex-col items-end leading-tight">
                         <span className="text-white/75">ΔT {fmtTempDelta(effectiveDeltaT)}</span>
                         <span
-                          className={`text-[10px] font-semibold ${
+                          className={`text-[11px] font-semibold ${
                             (effectiveDeltaR ?? 0) >= 15
                               ? 'text-[#ff3b30]'
                               : (effectiveDeltaR ?? 0) >= 5
@@ -564,14 +564,14 @@ export function MultiModelComparison({
                   <tr key={wn3Day.dateKey} className="hover:bg-white/[0.04] align-top">
                     <td className="py-2 pr-1.5">
                       <div className="font-semibold text-white/85 whitespace-nowrap">{wn3Day.dayLabel}</div>
-                      <div className="text-[9px] text-white/40">WN3 Ext</div>
+                      <div className="text-[11px] text-white/60">WN3 Ext</div>
                     </td>
                     <td className="py-2 px-1 text-right bg-[#ff3b30]/10 font-mono">
                       <div className="flex flex-col items-end leading-tight">
                         <span className="text-white font-semibold">
                           {fmtTemp(wn3Day.minTemp)}/{fmtTemp(wn3Day.maxTemp)}
                         </span>
-                        <span className={`text-[10px] ${(wn3Day.rainMm ?? 0) >= 5 ? 'text-[#32ADE6] font-semibold' : 'text-white/60'}`}>
+                        <span className={`text-[11px] ${(wn3Day.rainMm ?? 0) >= 5 ? 'text-[#32ADE6] font-semibold' : 'text-white/60'}`}>
                           {wn3Day.rainMm !== null ? `${fmtRain(wn3Day.rainMm)}${isMetric ? 'mm' : 'in'}` : '—'}
                         </span>
                       </div>

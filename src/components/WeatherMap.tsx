@@ -13,6 +13,7 @@ import { WeatherMarkers } from './WeatherMarkers';
 import { EmergencyMapLayers } from './EmergencyMapLayers';
 import { RadarControlBar } from './RadarControlBar';
 import { MapFloatingControls } from './MapFloatingControls';
+import { MapLegend } from './MapLegend';
 import { LayersMenu, type MapStyle, type QuickView } from './LayersMenu';
 import { panToWithVerticalOffset } from '../utils/mapUtils';
 
@@ -189,6 +190,8 @@ function MapContent() {
       />
 
       <MapFloatingControls onLocateUser={handleLocateUser} isLocating={isLocating} />
+
+      <MapLegend />
 
       <LayersMenu
         mapTypeId={mapTypeId}

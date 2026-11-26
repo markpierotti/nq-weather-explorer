@@ -4,17 +4,18 @@
  *
  * Runs inside the server: a check every hour does whatever is due (a forecast snapshot once a day after 5 am
  * Brisbane time, main-run model history and SILO observations a few times a day). On a host that sleeps between
- * requests (e.g. Cloud Run), set TRACKER_SCHEDULER=off and call POST /api/tracker/run from a scheduler instead.
+ * requests (e.g. Cloud Run), set TRACKER_SCHEDULER=off and call POST /api/tracker/run from a scheduler instead
+ * (authenticated with SCHEDULER_TOKEN, see server/schedulerAuth.ts).
  *
  * Request budget per run, per site: 1 Open-Meteo ensemble + 1 previous-runs call, 1 BOM précis XML (shared),
  * 1 SILO call. About 4 sites × 4 calls a day.
  *
- * Env: SILO_EMAIL (server-only; SILO's API key is an email address), TRACKER_RUN_TOKEN, TRACKER_SCHEDULER.
+ * Env: SILO_EMAIL (server-only; SILO's API key is an email address), SCHEDULER_TOKEN, TRACKER_SCHEDULER.
  */
-import crypto from 'node:crypto';
 import type { Express } from 'express';
 import type { TrackerSiteSummary, TrackerSummaryResponse } from '../../src/types/weather';
 import { redactSecrets } from '../feeds/http';
+import { inProcessSchedulerEnabled, schedulerTokenOk } from '../schedulerAuth';
 import { scoreSource } from './score';
 import { TRACKED_SITES } from './sites';
 import { addDays, brisbaneDate, fetchBomPrecis, fetchEnsembleForecasts, fetchPreviousRuns, fetchSiloObs } from './sources';
@@ -175,14 +176,6 @@ export function buildSummary(store: TrackerStore, windowDays: number): TrackerSu
   return data;
 }
 
-function tokenOk(header: string | undefined): boolean {
-  const token = process.env.TRACKER_RUN_TOKEN || '';
-  if (token.length < 16 || !header?.startsWith('Bearer ')) return false;
-  const given = Buffer.from(header.slice(7));
-  const want = Buffer.from(token);
-  return given.length === want.length && crypto.timingSafeEqual(given, want);
-}
-
 export function registerTrackerRoutes(app: Express, store: TrackerStore = new FileTrackerStore()) {
   app.get('/api/tracker/summary', (req, res) => {
     const days = Math.min(365, Math.max(14, Number.parseInt(String(req.query.days ?? '60'), 10) || 60));
@@ -195,9 +188,9 @@ export function registerTrackerRoutes(app: Express, store: TrackerStore = new Fi
     }
   });
 
-  // For an external scheduler (e.g. Cloud Scheduler). Disabled unless TRACKER_RUN_TOKEN (16+ chars) is set.
+  // For an external scheduler (e.g. Cloud Scheduler). Disabled unless SCHEDULER_TOKEN (16+ chars) is set.
   app.post('/api/tracker/run', async (req, res) => {
-    if (!tokenOk(req.get('authorization'))) return res.status(404).json({ error: 'Not found' });
+    if (!schedulerTokenOk(req)) return res.status(404).json({ error: 'Not found' });
     const report = await runTracker(store, req.query.force === '1');
     res.json(report);
   });
@@ -205,7 +198,7 @@ export function registerTrackerRoutes(app: Express, store: TrackerStore = new Fi
 
 /** Hourly in-process scheduler (default). TRACKER_SCHEDULER=off disables it. */
 export function startTrackerScheduler(store: TrackerStore = new FileTrackerStore()) {
-  if ((process.env.TRACKER_SCHEDULER || '').toLowerCase() === 'off') return;
+  if (!inProcessSchedulerEnabled('TRACKER_SCHEDULER')) return;
   const tick = () =>
     runTracker(store)
       .then((r) => {

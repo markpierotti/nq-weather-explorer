@@ -58,6 +58,22 @@ function base64Url(input: string | Buffer): string {
     .replace(/\//g, '_');
 }
 
+/** Access token for the attached service account when running on Google Cloud; null elsewhere. */
+async function metadataToken(): Promise<{ token: string; expiresAtMs: number } | null> {
+  try {
+    const res = await fetch(
+      'http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token',
+      { headers: { 'Metadata-Flavor': 'Google' }, signal: AbortSignal.timeout(2000) },
+    );
+    if (!res.ok) return null;
+    const j = (await res.json()) as { access_token?: string; expires_in?: number };
+    if (!j.access_token) return null;
+    return { token: j.access_token, expiresAtMs: Date.now() + (j.expires_in ?? 300) * 1000 };
+  } catch {
+    return null;
+  }
+}
+
 async function getAccessToken(): Promise<string> {
   const staticToken = (process.env.GCP_ACCESS_TOKEN || '').trim();
   if (staticToken) return staticToken;
@@ -68,6 +84,12 @@ async function getAccessToken(): Promise<string> {
 
   const credPath = (process.env.GOOGLE_APPLICATION_CREDENTIALS || '').trim();
   if (!credPath) {
+    // On Google Cloud (e.g. Cloud Run), use the attached service account via the metadata server.
+    const meta = await metadataToken();
+    if (meta) {
+      cachedToken = meta;
+      return meta.token;
+    }
     throw new Error(
       'Missing GCP_ACCESS_TOKEN or GOOGLE_APPLICATION_CREDENTIALS for Discovery Engine CheckGrounding.',
     );

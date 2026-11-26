@@ -5,6 +5,7 @@
  * { enabled: false }, subscribe routes return 503, and the poller stays idle.
  */
 import type { Express, Request, Response } from 'express';
+import { inProcessSchedulerEnabled, schedulerTokenOk } from '../schedulerAuth';
 import type { EmergencyFeatureItem } from '../../src/types/weather';
 import { getFeedCached } from '../feeds/index';
 import {
@@ -176,6 +177,13 @@ export function registerPushRoutes(app: Express): void {
   });
 
   // POST /api/push/test — send a test notification
+  // External scheduler hook (Cloud Run): one feed poll + dispatch. Disabled unless SCHEDULER_TOKEN is set.
+  app.post('/api/push/poll', async (req: Request, res: Response) => {
+    if (!schedulerTokenOk(req)) return res.status(404).json({ error: 'Not found' });
+    const ran = await pollPushOnce();
+    res.json({ ok: true, ran });
+  });
+
   app.post('/api/push/test', async (req: Request, res: Response) => {
     const ready = await ensureWebPush();
     if (!ready) {
@@ -341,7 +349,18 @@ async function poll(): Promise<void> {
   }
 }
 
+/** One poll, for an external scheduler (POST /api/push/poll). Resolves false if push isn't configured. */
+export async function pollPushOnce(): Promise<boolean> {
+  if (!(await ensureWebPush())) return false;
+  await poll();
+  return true;
+}
+
 export function startPushPoller(): void {
+  if (!inProcessSchedulerEnabled('PUSH_POLLER')) {
+    console.log('[push] In-process poller off (PUSH_POLLER=off); expecting POST /api/push/poll from a scheduler.');
+    return;
+  }
   ensureWebPush().then((ready) => {
     if (!ready) {
       console.log('[push] VAPID keys not configured — push poller is idle. Set VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY to enable.');

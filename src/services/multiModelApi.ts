@@ -14,6 +14,7 @@ import {
   MultiModelBundle,
   RainViewerData,
   RainViewerFrame,
+  ForecastGridResponse,
   ThreeHourlyModelRow,
   WeatherLocation,
 } from '../types/weather';
@@ -514,9 +515,22 @@ export async function fetchMultiModelForecast(
 }
 
 /**
- * Fetch animated radar frames from RainViewer public weather-maps.json
+ * Fetch the server-cached Open-Meteo model rain grid for NQ (keyless; see server/forecastGrid.ts).
  */
-export async function fetchRainViewerFrames(): Promise<RainViewerData | null> {
+async function fetchForecastGrid(): Promise<ForecastGridResponse | null> {
+  try {
+    const res = await fetch('/api/weather/forecast-grid', { signal: AbortSignal.timeout(25000) });
+    if (!res.ok) return null;
+    const data = (await res.json()) as ForecastGridResponse;
+    if (!Array.isArray(data?.times) || !Array.isArray(data?.precip) || !data.rows || !data.cols) return null;
+    return data;
+  } catch (err) {
+    console.warn('Forecast grid fetch failed:', err);
+    return null;
+  }
+}
+
+async function fetchRainViewerRadar(): Promise<{ host: string; generated: number; frames: RainViewerFrame[] } | null> {
   try {
     const res = await fetch('https://api.rainviewer.com/public/weather-maps.json', {
       signal: AbortSignal.timeout(7000),
@@ -549,4 +563,31 @@ export async function fetchRainViewerFrames(): Promise<RainViewerData | null> {
     console.warn('RainViewer fetch failed:', err);
     return null;
   }
+}
+
+/**
+ * Radar timeline: RainViewer observed frames (plus nowcast, if RainViewer ever serves it again),
+ * followed by hourly Open-Meteo model forecast frames for hours after the last radar frame.
+ */
+export async function fetchRainViewerFrames(): Promise<RainViewerData | null> {
+  const [radar, grid] = await Promise.all([fetchRainViewerRadar(), fetchForecastGrid()]);
+  const radarFrames = radar?.frames ?? [];
+  const lastRadarTime = radarFrames.length
+    ? radarFrames[radarFrames.length - 1].time
+    : Math.floor(Date.now() / 1000);
+
+  const modelFrames: RainViewerFrame[] = grid
+    ? grid.times
+        .map((time, gridIndex) => ({ time, path: '', kind: 'model' as const, gridIndex }))
+        .filter((f) => f.time > lastRadarTime && Array.isArray(grid.precip[f.gridIndex]))
+    : [];
+
+  const frames = [...radarFrames, ...modelFrames];
+  if (frames.length === 0) return null;
+  return {
+    host: radar?.host ?? '',
+    generated: radar?.generated ?? Math.floor(Date.now() / 1000),
+    frames,
+    forecastGrid: modelFrames.length ? grid : null,
+  };
 }

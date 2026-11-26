@@ -24,6 +24,7 @@ function RadarTileLayer() {
     <WeatherTileOverlay
       rainViewerHost={rainViewerData?.host}
       rainViewerFrame={rainViewerData?.frames[activeFrameIndex] ?? null}
+      forecastGrid={rainViewerData?.forecastGrid ?? null}
       opacity={radarOpacity}
       visible={radarVisible}
     />

@@ -411,14 +411,34 @@ export interface MultiModelBundle {
 
 export interface RainViewerFrame {
   time: number;
+  /** RainViewer tile path; empty for 'model' frames. */
   path: string;
-  kind: 'past' | 'nowcast';
+  /** 'past' = observed radar, 'nowcast' = RainViewer extrapolation, 'model' = Open-Meteo hourly forecast. */
+  kind: 'past' | 'nowcast' | 'model';
+  /** Index into ForecastGridResponse.precip for 'model' frames. */
+  gridIndex?: number;
 }
 
 export interface RainViewerData {
   host: string;
   generated: number;
   frames: RainViewerFrame[];
+  /** Open-Meteo model rain grid backing the 'model' frames, when available. */
+  forecastGrid?: ForecastGridResponse | null;
+}
+
+/** /api/weather/forecast-grid: hourly model precipitation on a regular lat/lon grid over NQ. */
+export interface ForecastGridResponse {
+  bbox: { north: number; south: number; west: number; east: number };
+  rows: number;
+  cols: number;
+  /** Unix seconds; each value is the end of the hour that precip[t] accumulates over. */
+  times: number[];
+  /** precip[t][row * cols + col], tenths of a millimetre; rows run north to south. */
+  precip: number[][];
+  fetchedAt: number;
+  fromCache?: boolean;
+  error?: string;
 }
 
 // ---------------------------------------------------------------------------

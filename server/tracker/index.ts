@@ -156,7 +156,7 @@ export function buildSummary(store: TrackerStore, windowDays: number): TrackerSu
     return {
       id: site.id,
       label: site.label,
-      station: site.station ? { id: site.station.id, name: site.station.name } : null,
+      station: site.station ? { id: site.station.id, name: site.station.name, lat: site.station.lat, lon: site.station.lon } : null,
       bomTown: site.bomTown,
       obsDays: obsDates.length,
       firstObs: obsDates[0] ?? null,

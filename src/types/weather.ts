@@ -485,7 +485,7 @@ export interface TrackerLeadScore {
 export interface TrackerSiteSummary {
   id: string;
   label: string;
-  station: { id: string; name: string } | null;
+  station: { id: string; name: string; lat: number; lon: number } | null;
   /** BOM town forecast used for this site's "BOM" source, if any. */
   bomTown: string | null;
   obsDays: number;

@@ -4,6 +4,35 @@ An operational weather, radar, and disaster corridor monitoring web app built fo
 
 During North Queensland's wet season, critical situational awareness is scattered across separate agency portals—BOM forecasts and river height bulletins, QLDTraffic road closures, Ergon outage maps, and Burdekin/Townsville disaster dashboards. **NQ Weather Explorer** unifies those live feeds onto a single dark-glass, mobile-first Google Maps interface with multi-model forecast consensus, Web Push corridor alerts, and a fail-closed, grounding-verified AI corridor briefing assistant.
 
+![NQ Weather Explorer — Bruce Highway Corridor & Emergency Map](docs/screenshots/01-corridor-emergency-map.png)
+
+## Screenshots
+
+### Multi-Model Consensus, Radar & Live River Gauges
+
+| Dark-Mode Radar & Consensus Popup | 7-Day 4-Model Matrix (WN2 · BOM · ECMWF · GFS) |
+| :---: | :---: |
+| ![Dark-mode radar overview](docs/screenshots/02-dark-radar-overview.png) | ![7-day 4-model forecast matrix](docs/screenshots/03-multi-model-7day-matrix.png) |
+
+| Live BOM River Gauge & 24h Sparkline | Life-Safety AI Corridor Briefing & Chat |
+| :---: | :---: |
+| ![Live BOM river height gauge](docs/screenshots/04-river-gauge-sparkline.png) | ![AI Corridor Briefing and chat](docs/screenshots/05-ai-corridor-briefing.png) |
+
+### Mobile-First Bottom Sheet & Official BOM Warnings
+
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <img src="docs/screenshots/06-mobile-emergency-sheet.png" alt="Mobile emergency bottom sheet" width="320" /><br />
+      <sub>Mobile bottom sheet with corridor road filters &amp; Map Legend pill</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="docs/screenshots/07-mobile-bom-warning.png" alt="Mobile BOM warning detail" width="320" /><br />
+      <sub>Official BOM QLD warning popup with direct bom.gov.au link</sub>
+    </td>
+  </tr>
+</table>
+
 ## Key Capabilities
 
 - **4-Model Forecast Consensus & Spread:** Side-by-side comparison of **Google WeatherNext 2**, **BOM**, **ECMWF IFS**, and **NOAA GFS** (plus on-demand **WeatherNext 3** in Cyclone Mode) with temperature/rainfall spread indicators so you can see where models agree or diverge.

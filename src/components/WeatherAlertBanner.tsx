@@ -41,7 +41,7 @@ export function WeatherAlertBanner({ alerts }: WeatherAlertBannerProps) {
                 <ShieldAlert className={`w-4 h-4 shrink-0 ${isSevere ? 'text-[#ff3b30]' : 'text-[#ff9500]'}`} />
                 <div className="flex items-center gap-2 min-w-0">
                   <span
-                    className={`text-[10px] font-bold px-1.5 py-0.5 rounded tracking-wide shrink-0 ${
+                    className={`text-[11px] font-bold px-1.5 py-0.5 rounded tracking-wide shrink-0 ${
                       isSevere ? 'bg-[#ff3b30] text-white' : 'bg-[#ff9500] text-white'
                     }`}
                   >
@@ -72,7 +72,7 @@ export function WeatherAlertBanner({ alerts }: WeatherAlertBannerProps) {
                   </div>
                 )}
                 {alert.senderName && (
-                  <div className="text-[10px] text-white/60 font-mono">
+                  <div className="text-[11px] text-white/60 font-mono">
                     Issued by {alert.senderName}
                   </div>
                 )}

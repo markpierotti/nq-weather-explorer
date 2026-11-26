@@ -39,7 +39,7 @@ export function AlertsPanel() {
 
       {bomWarnings.length > 0 && (
         <div className="rounded-[20px] border border-[#ff3b30]/40 bg-[#ff3b30]/15 backdrop-blur-xl p-4 space-y-1.5">
-          <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-rose-200">
+          <div className="font-mono text-[11px] uppercase tracking-[0.1em] text-rose-200">
             BOM Active Warnings ({bomWarnings.length})
           </div>
           {bomWarnings.map((w) => (
@@ -52,7 +52,7 @@ export function AlertsPanel() {
 
       {emergencyWarnings.length > 0 && (
         <div className="ios-bento-card p-4 space-y-2">
-          <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-white/60">
+          <div className="font-mono text-[11px] uppercase tracking-[0.1em] text-white/60">
             Emergency Feed Warnings ({emergencyWarnings.length})
           </div>
           {emergencyWarnings.map((item) => {

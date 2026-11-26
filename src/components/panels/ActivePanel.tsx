@@ -29,7 +29,7 @@ export function ActivePanel() {
 export function AttributionFooter() {
   const { multiModelBundle } = useAppData();
   return (
-    <footer className="pt-6 pb-2 text-center font-mono text-[10px] tracking-wider text-white/60 uppercase tabular-nums space-y-1">
+    <footer className="pt-6 pb-2 text-center font-mono text-[11px] tracking-wider text-white/60 uppercase tabular-nums space-y-1">
       <div>OPEN-METEO · BOM · RAINVIEWER · QLD ARCGIS</div>
       <div>
         {new Date(multiModelBundle?.lastUpdated || Date.now()).toLocaleTimeString('en-AU', {

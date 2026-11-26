@@ -158,7 +158,7 @@ export function GaugeDetail({ gauge, tone = 'dark' }: { gauge: RiverGaugeReading
           {gauge.trend}
         </span>
         <span
-          className="ml-auto px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide"
+          className="ml-auto px-1.5 py-0.5 rounded-md text-[11px] font-bold uppercase tracking-wide"
           style={{ background: `${color}33`, color: dark ? color : '#0f172a', boxShadow: `inset 0 0 0 1px ${color}88` }}
         >
           {FLOOD_CLASS_LABEL[gauge.floodClass]}
@@ -167,7 +167,7 @@ export function GaugeDetail({ gauge, tone = 'dark' }: { gauge: RiverGaugeReading
 
       <GaugeSparkline gauge={gauge} tone={tone} />
 
-      <div className={`flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] tabular-nums ${muted}`}>
+      <div className={`flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] tabular-nums ${muted}`}>
         {(['minor', 'moderate', 'major'] as const).map((k) =>
           gauge.thresholds[k] !== null ? (
             <span key={k} className="inline-flex items-center gap-1">
@@ -182,7 +182,7 @@ export function GaugeDetail({ gauge, tone = 'dark' }: { gauge: RiverGaugeReading
           </span>
         )}
       </div>
-      {observed && <div className={`text-[10px] ${muted}`}>Observed {observed} · 24h trace</div>}
+      {observed && <div className={`text-[11px] ${muted}`}>Observed {observed} · 24h trace</div>}
     </div>
   );
 }

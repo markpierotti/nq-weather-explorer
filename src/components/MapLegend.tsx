@@ -127,7 +127,7 @@ export function MapLegend() {
           <div className="px-3 pb-3 pt-1.5 border-t border-white/10 space-y-2.5 text-[11px] max-h-[60vh] overflow-y-auto no-scrollbar">
             {/* River Heights */}
             <div className={emergencyLayers.gauges ? 'space-y-1.5' : 'space-y-1.5 opacity-40'}>
-              <div className="text-[10px] font-mono uppercase tracking-wider text-white/60">
+              <div className="text-[11px] font-mono uppercase tracking-wider text-white/60">
                 River Heights
               </div>
               <div className="grid grid-cols-2 gap-x-2 gap-y-1">
@@ -151,14 +151,14 @@ export function MapLegend() {
                   );
                 })}
               </div>
-              <div className="text-[10px] text-white/60 leading-tight">
+              <div className="text-[11px] text-white/60 leading-tight">
                 Larger badge = actively flooding
               </div>
             </div>
 
             {/* Roads & Corridor */}
             <div className="pt-2 border-t border-white/10 space-y-1.5">
-              <div className="text-[10px] font-mono uppercase tracking-wider text-white/60">
+              <div className="text-[11px] font-mono uppercase tracking-wider text-white/60">
                 Roads &amp; Corridor
               </div>
               <div className="space-y-1">
@@ -195,7 +195,7 @@ export function MapLegend() {
 
             {/* Warnings, Outages & Support */}
             <div className="pt-2 border-t border-white/10 space-y-1.5">
-              <div className="text-[10px] font-mono uppercase tracking-wider text-white/60">
+              <div className="text-[11px] font-mono uppercase tracking-wider text-white/60">
                 Warnings &amp; Support
               </div>
               <div className="space-y-1">

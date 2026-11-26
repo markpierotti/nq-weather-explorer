@@ -260,7 +260,7 @@ export function EmergencyMapLayers({
           onCloseClick={() => onSelectItem(null)}
         >
           <div className="max-w-[260px] text-xs font-sans text-slate-800 space-y-1.5 p-0.5">
-            <div className="text-[10px] font-semibold text-slate-500">
+            <div className="text-[11px] font-semibold text-slate-500">
               {selectedItem.sourceLabel}
               {selectedItem.isCorridorPriority && ` · ${selectedItem.corridorTags.join(', ')}`}
             </div>
@@ -278,7 +278,7 @@ export function EmergencyMapLayers({
               )
             )}
             {selectedItem.bomWarning && (
-              <div className="text-[10px] text-slate-500 space-y-0.5">
+              <div className="text-[11px] text-slate-500 space-y-0.5">
                 {selectedItem.bomWarning.areas.length > 0 && <div>Areas: {selectedItem.bomWarning.areas.join(', ')}</div>}
                 {formatGaugeTime(selectedItem.bomWarning.issuedAt) && (
                   <div>Issued {formatGaugeTime(selectedItem.bomWarning.issuedAt)}</div>
@@ -296,7 +296,7 @@ export function EmergencyMapLayers({
               </div>
             )}
             {selectedItem.updatedAt && !selectedItem.gauge && (
-              <div className="text-[10px] font-mono text-slate-400 pt-1 border-t border-slate-100">
+              <div className="text-[11px] font-mono text-slate-400 pt-1 border-t border-slate-100">
                 Updated: {selectedItem.updatedAt}
               </div>
             )}

@@ -73,7 +73,7 @@ export function HourlyForecastTimeline({ hourly = [], historyHours = [] }: Hourl
           )}
         </div>
 
-        <span className="text-[10px] text-white/60 font-mono">HOURLY</span>
+        <span className="text-[11px] text-white/60 font-mono">HOURLY</span>
       </div>
 
       <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar select-none tabular-nums">
@@ -99,7 +99,7 @@ export function HourlyForecastTimeline({ hourly = [], historyHours = [] }: Hourl
               <div className="my-2 flex flex-col items-center gap-1">
                 {getConditionIcon(conditionType)}
                 {precipProb > 10 && (
-                  <span className="text-[10px] font-bold text-[#32ADE6]">{precipProb}%</span>
+                  <span className="text-[11px] font-bold text-[#32ADE6]">{precipProb}%</span>
                 )}
               </div>
 

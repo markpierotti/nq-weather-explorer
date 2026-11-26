@@ -122,7 +122,7 @@ export function AddLocationForm({ onClose }: { onClose: () => void }) {
       </div>
 
       <div>
-        <div className="text-[10px] font-mono uppercase tracking-wider text-white/60 mb-1">Search a town or place</div>
+        <div className="text-[11px] font-mono uppercase tracking-wider text-white/60 mb-1">Search a town or place</div>
         <PlaceAutocompleteNew
           onSelectLocation={addAndClose}
           placeholder="Type place name (e.g. Home Hill, Giru, Bowen)…"
@@ -141,7 +141,7 @@ export function AddLocationForm({ onClose }: { onClose: () => void }) {
       )}
 
       <form onSubmit={handleSubmit} className="pt-2 border-t border-white/10 space-y-2">
-        <div className="text-[10px] font-mono uppercase tracking-wider text-white/60">Or enter custom coordinates</div>
+        <div className="text-[11px] font-mono uppercase tracking-wider text-white/60">Or enter custom coordinates</div>
         <input
           type="text"
           value={customName}

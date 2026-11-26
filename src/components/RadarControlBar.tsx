@@ -189,7 +189,7 @@ export function RadarControlBar() {
         </div>
 
         {showLegend && (
-          <div className="flex items-center gap-2 pt-1.5 px-1 text-[10px] text-white/60 overflow-x-auto no-scrollbar">
+          <div className="flex items-center gap-2 pt-1.5 px-1 text-[11px] text-white/60 overflow-x-auto no-scrollbar">
             {LEGEND.map((l) => (
               <span key={l.color} className="flex items-center gap-1 whitespace-nowrap">
                 <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: l.color }} />

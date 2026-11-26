@@ -40,7 +40,7 @@ interface LayersMenuProps {
 }
 
 function SectionTitle({ children }: { children: ReactNode }) {
-  return <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-white/60 mb-2">{children}</div>;
+  return <div className="font-mono text-[11px] uppercase tracking-[0.1em] text-white/60 mb-2">{children}</div>;
 }
 
 function LayersMenuBody({ mapTypeId, onChangeMapType, onQuickView }: LayersMenuProps) {

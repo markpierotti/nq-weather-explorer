@@ -46,7 +46,7 @@ export function MobileTabBar({ ref }: { ref?: Ref<HTMLElement> }) {
                 <Icon className="w-6 h-6" />
                 {count > 0 && (
                   <span
-                    className={`absolute -top-1.5 -right-2.5 min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold leading-[18px] text-center text-white tabular-nums ${
+                    className={`absolute -top-1.5 -right-2.5 min-w-[18px] h-[18px] px-1 rounded-full text-[11px] font-bold leading-[18px] text-center text-white tabular-nums ${
                       id === 'alerts' ? 'bg-[#ff3b30]' : 'bg-[#ff9500]'
                     }`}
                     aria-label={`${count} items`}

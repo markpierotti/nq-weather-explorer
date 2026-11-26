@@ -39,7 +39,7 @@ export function AtmosphericMetricsGrid({ current, unitSystem }: AtmosphericMetri
   return (
     <div className="grid grid-cols-2 gap-3 tabular-nums">
       <div className="ios-bento-card p-3.5 flex flex-col justify-between">
-        <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.1em] text-white/60">
+        <div className="flex items-center justify-between font-mono text-[11px] uppercase tracking-[0.1em] text-white/60">
           <span className="flex items-center gap-1.5">
             <CloudRain className="w-3.5 h-3.5 text-[#32ADE6]" /> Precip
           </span>
@@ -60,7 +60,7 @@ export function AtmosphericMetricsGrid({ current, unitSystem }: AtmosphericMetri
       </div>
 
       <div className="ios-bento-card p-3.5 flex flex-col justify-between">
-        <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.1em] text-white/60">
+        <div className="flex items-center justify-between font-mono text-[11px] uppercase tracking-[0.1em] text-white/60">
           <span className="flex items-center gap-1.5">
             <Wind className="w-3.5 h-3.5 text-[#32ADE6]" /> Wind
           </span>
@@ -78,7 +78,7 @@ export function AtmosphericMetricsGrid({ current, unitSystem }: AtmosphericMetri
       </div>
 
       <div className="ios-bento-card p-3.5 flex flex-col justify-between">
-        <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.1em] text-white/60">
+        <div className="flex items-center justify-between font-mono text-[11px] uppercase tracking-[0.1em] text-white/60">
           <span className="flex items-center gap-1.5">
             <Droplets className="w-3.5 h-3.5 text-[#32ADE6]" /> Humidity
           </span>
@@ -92,7 +92,7 @@ export function AtmosphericMetricsGrid({ current, unitSystem }: AtmosphericMetri
       </div>
 
       <div className="ios-bento-card p-3.5 flex flex-col justify-between">
-        <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.1em] text-white/60">
+        <div className="flex items-center justify-between font-mono text-[11px] uppercase tracking-[0.1em] text-white/60">
           <span className="flex items-center gap-1.5">
             <Sun className="w-3.5 h-3.5 text-[#ff9500]" /> UV Index
           </span>
@@ -107,7 +107,7 @@ export function AtmosphericMetricsGrid({ current, unitSystem }: AtmosphericMetri
       </div>
 
       <div className="ios-bento-card p-3.5 flex flex-col justify-between">
-        <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.1em] text-white/60">
+        <div className="flex items-center justify-between font-mono text-[11px] uppercase tracking-[0.1em] text-white/60">
           <span className="flex items-center gap-1.5">
             <Cloud className="w-3.5 h-3.5 text-indigo-400" /> Cloud
           </span>
@@ -125,7 +125,7 @@ export function AtmosphericMetricsGrid({ current, unitSystem }: AtmosphericMetri
       </div>
 
       <div className="ios-bento-card p-3.5 flex flex-col justify-between">
-        <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.1em] text-white/60">
+        <div className="flex items-center justify-between font-mono text-[11px] uppercase tracking-[0.1em] text-white/60">
           <span className="flex items-center gap-1.5">
             <Gauge className="w-3.5 h-3.5 text-[#34c759]" /> Pressure
           </span>

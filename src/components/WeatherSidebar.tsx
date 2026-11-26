@@ -66,7 +66,7 @@ function CollapsedDock({ onOpenAddLocation }: { onOpenAddLocation: () => void })
               </span>
             )}
           </div>
-          <div className="text-[10px] text-white/65 truncate max-w-[160px]">{conditionText}</div>
+          <div className="text-[11px] text-white/65 truncate max-w-[160px]">{conditionText}</div>
         </div>
         <ChevronRight className="w-4 h-4 text-white/60 ml-0.5" />
       </button>

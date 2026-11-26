@@ -16,7 +16,7 @@ import { CycloneThreatSection } from './ModelsPanel';
 const linkBtn = 'text-[11px] font-medium cursor-pointer min-h-11 lg:min-h-0 -my-3 lg:my-0 flex items-center';
 
 function ModelChip({ label, className = 'bg-white/10 text-white/80' }: { label: string; className?: string }) {
-  return <div className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-mono mb-1 ${className}`}>{label}</div>;
+  return <div className={`inline-block px-1.5 py-0.5 rounded text-[11px] font-mono mb-1 ${className}`}>{label}</div>;
 }
 
 function ConsensusBento() {
@@ -44,7 +44,7 @@ function ConsensusBento() {
     <div className="grid grid-cols-2 gap-3 tabular-nums">
       <div className="col-span-2 ios-bento-card p-4">
         <div className="flex items-center justify-between mb-3">
-          <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-white/60 flex items-center gap-1.5">
+          <div className="font-mono text-[11px] uppercase tracking-[0.1em] text-white/60 flex items-center gap-1.5">
             <BarChart3 className="w-3.5 h-3.5 text-white/60" />
             <span>Multi-Model Consensus (Today)</span>
           </div>
@@ -67,7 +67,7 @@ function ConsensusBento() {
 
             {todayWn3 && (
               <div className="col-span-2 pt-2 border-t border-white/10 flex items-center justify-between text-xs">
-                <span className="inline-block px-1.5 py-0.5 rounded bg-[#ff3b30]/25 text-[#ff3b30] font-mono text-[10px] font-semibold">
+                <span className="inline-block px-1.5 py-0.5 rounded bg-[#ff3b30]/25 text-[#ff3b30] font-mono text-[11px] font-semibold">
                   WN3
                 </span>
                 <span className="font-semibold text-white">
@@ -86,7 +86,7 @@ function ConsensusBento() {
       </div>
 
       <div className="ios-bento-card p-4 flex flex-col justify-between">
-        <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-white/60">Precipitation</div>
+        <div className="font-mono text-[11px] uppercase tracking-[0.1em] text-white/60">Precipitation</div>
         <div className="mt-2">
           <div className="text-[1.8rem] font-semibold leading-none text-white">
             {spread?.peak24hRainConsensusMm !== null && spread?.peak24hRainConsensusMm !== undefined
@@ -101,7 +101,7 @@ function ConsensusBento() {
       </div>
 
       <div className="ios-bento-card p-4 flex flex-col justify-between">
-        <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-white/60">Consensus</div>
+        <div className="font-mono text-[11px] uppercase tracking-[0.1em] text-white/60">Consensus</div>
         <div className="mt-2">
           <div className={`text-base font-semibold leading-tight ${spreadColorClass}`}>
             {spread?.agreementLabel || 'Syncing…'}
@@ -126,7 +126,7 @@ function EmergencySummaryCard() {
   return (
     <div className="rounded-[20px] border border-[#ff3b30]/25 bg-[#ff3b30]/10 backdrop-blur-xl p-4">
       <div className="flex items-center justify-between mb-2">
-        <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-[#ff3b30]">Emergency Info</div>
+        <div className="font-mono text-[11px] uppercase tracking-[0.1em] text-[#ff3b30]">Emergency Info</div>
         <button type="button" onClick={() => onChangeTab('emergency')} className={`${linkBtn} text-white/75 hover:text-white`}>
           {items.length} Active →
         </button>
@@ -171,7 +171,7 @@ function AlertsTeaser() {
     >
       <AlertTriangle className="w-5 h-5 text-[#ff3b30] shrink-0" />
       <div className="min-w-0 flex-1">
-        <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-rose-200">
+        <div className="font-mono text-[11px] uppercase tracking-[0.1em] text-rose-200">
           {alerts} Active Warning{alerts > 1 ? 's' : ''}
         </div>
         <div className="text-xs text-white/90 truncate mt-0.5">{firstTitle}</div>

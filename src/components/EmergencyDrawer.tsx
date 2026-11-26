@@ -169,7 +169,7 @@ export function EmergencyDrawer({
       {/* Header + Emergency Switch */}
       <div className="ios-bento-card p-3.5 flex items-center justify-between gap-2">
         <div>
-          <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-white/60">
+          <div className="font-mono text-[11px] uppercase tracking-[0.1em] text-white/60">
             Closures, Outages & Warnings
           </div>
           <p className="text-[11px] text-white/65 mt-0.5">
@@ -251,21 +251,21 @@ export function EmergencyDrawer({
             <button
               type="button"
               onClick={() => onChangeProxyUrl('/api/emergency/proxy?url=')}
-              className="px-2.5 py-1 rounded-lg bg-[#32ADE6]/20 border border-[#32ADE6]/40 text-[10px] font-semibold text-[#32ADE6] cursor-pointer"
+              className="px-2.5 py-1 rounded-lg bg-[#32ADE6]/20 border border-[#32ADE6]/40 text-[11px] font-semibold text-[#32ADE6] cursor-pointer"
             >
               Built-in Proxy (Default)
             </button>
             <button
               type="button"
               onClick={() => onChangeProxyUrl('http://localhost:8787/api/emergency')}
-              className="px-2.5 py-1 rounded-lg bg-white/10 border border-white/10 hover:bg-white/15 text-[10px] font-medium text-white/80 cursor-pointer"
+              className="px-2.5 py-1 rounded-lg bg-white/10 border border-white/10 hover:bg-white/15 text-[11px] font-medium text-white/80 cursor-pointer"
             >
               localhost:8787
             </button>
             <button
               type="button"
               onClick={() => onChangeProxyUrl('https://api.allorigins.win/raw?url=')}
-              className="px-2.5 py-1 rounded-lg bg-white/10 border border-white/10 hover:bg-white/15 text-[10px] font-medium text-white/80 cursor-pointer"
+              className="px-2.5 py-1 rounded-lg bg-white/10 border border-white/10 hover:bg-white/15 text-[11px] font-medium text-white/80 cursor-pointer"
             >
               AllOrigins
             </button>
@@ -419,7 +419,7 @@ export function EmergencyDrawer({
             </button>
 
             {showFeedStatus && (
-              <div className="px-3.5 pb-3 pt-2 border-t border-white/10 space-y-1 text-[10px] font-mono">
+              <div className="px-3.5 pb-3 pt-2 border-t border-white/10 space-y-1 text-[11px] font-mono">
                 {feedStatuses.map((f) => (
                   <div key={f.id} className="flex items-center justify-between gap-2 text-white/65">
                     <span className="truncate">{f.label}</span>

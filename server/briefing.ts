@@ -66,6 +66,9 @@ function apiErrorMessage(val: unknown): string | undefined {
   return undefined;
 }
 
+/** What viewers see when Gemini fails; the detailed reason stays in the server log. */
+const AI_UNAVAILABLE_MESSAGE = 'AI briefing is temporarily unavailable. Please try again later.';
+
 function redactKey(val: unknown, key: string): string {
   let out = String(apiErrorMessage(val) || (val as any)?.message || val || '');
   out = out.replace(/([?&]key=)[^&\s"']+/gi, '$1[REDACTED]');
@@ -617,7 +620,7 @@ async function handleCorridorBriefing(req: Request, res: Response): Promise<void
   } catch (err: any) {
     const safeErr = redactKey(err, key);
     console.error('Gemini Corridor Briefing error:', safeErr);
-    res.status(500).json({ error: `Unable to generate AI Corridor Briefing: ${safeErr}` });
+    res.status(503).json({ error: AI_UNAVAILABLE_MESSAGE });
   }
 }
 
@@ -720,7 +723,7 @@ async function handleCycloneSynthesis(req: Request, res: Response): Promise<void
   } catch (err: any) {
     const safeErr = redactKey(err, key);
     console.error('Gemini Cyclone Synthesis error:', safeErr);
-    res.status(500).json({ error: `Unable to run Cyclone Synthesis: ${safeErr}` });
+    res.status(503).json({ error: AI_UNAVAILABLE_MESSAGE });
   }
 }
 
@@ -924,7 +927,7 @@ async function handleBriefingChat(req: Request, res: Response): Promise<void> {
   } catch (err: any) {
     const safeErr = redactKey(err, key);
     console.error('Briefing chat error:', safeErr);
-    sendEvent({ type: 'error', error: safeErr });
+    sendEvent({ type: 'error', error: AI_UNAVAILABLE_MESSAGE });
   } finally {
     if (!res.writableEnded) {
       res.end();

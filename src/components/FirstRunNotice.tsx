@@ -234,7 +234,7 @@ export function FirstRunNotice() {
               </h2>
             </div>
 
-            <div className="mt-3 space-y-3 text-sm text-white/75 leading-relaxed">
+            <div className="mt-3 space-y-3 text-sm text-white/75 leading-relaxed text-pretty">
               <p id="first-run-notice-summary">
                 This app is just for me and a few friends. Some features are billed to my Google account, so
                 using them costs me real money.

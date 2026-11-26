@@ -35,7 +35,7 @@ function ConsensusBento() {
     ? [
         { label: 'WN2', m: todayRow.weatherNext2, rain: 'text-[#32ADE6]' },
         { label: 'BOM', m: todayRow.bom, rain: 'text-[#34c759]' },
-        { label: 'ECMWF', m: todayRow.ecmwf, rain: 'text-[#5856d6] font-bold' },
+        { label: 'ECMWF', m: todayRow.ecmwf, rain: 'text-[#a5a3ff] font-bold' },
         { label: 'GFS', m: todayRow.gfs, rain: 'text-[#ff9500]' },
       ]
     : [];

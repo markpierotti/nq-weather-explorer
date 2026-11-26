@@ -415,8 +415,16 @@ export interface RainViewerFrame {
   path: string;
   /** 'past' = observed radar, 'nowcast' = RainViewer extrapolation, 'model' = Open-Meteo hourly forecast. */
   kind: 'past' | 'nowcast' | 'model';
-  /** Index into ForecastGridResponse.precip for 'model' frames. */
-  gridIndex?: number;
+  /**
+   * 'model' frames: the frame's rain rate, interpolated in time between two hourly grid steps
+   * (precip[from] * (1 - mix) + precip[to] * mix).
+   */
+  grid?: { from: number; to: number; mix: number };
+  /**
+   * First few 'model' frames: crossfade from the last radar frame (drawn beneath at opacity × radar)
+   * into the model (opacity × model), so the timeline doesn't hard-cut from radar to forecast.
+   */
+  handover?: { radarPath: string; radar: number; model: number };
 }
 
 export interface RainViewerData {

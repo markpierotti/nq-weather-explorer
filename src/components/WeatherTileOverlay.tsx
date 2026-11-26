@@ -22,8 +22,11 @@ const RAINVIEWER_MAX_NATIVE_ZOOM = 7;
 /** Model tiles are drawn at low resolution and upscaled smoothly: the grid is ~80 km, so more is wasted work. */
 const MODEL_TILE_PX = 128;
 
-/** Full overlay alpha for model rain; the lightest band fades in so ~0.1 mm drizzle doesn't wash over the map. */
-const MODEL_ALPHA = 190;
+/**
+ * Full overlay alpha for model rain, close to RainViewer's near-opaque radar pixels so the handover doesn't
+ * visibly dim; the lightest band still fades in so ~0.1 mm drizzle doesn't wash over the map.
+ */
+const MODEL_ALPHA = 235;
 const MODEL_FADE_FROM_MM = 0.1;
 const MODEL_FADE_TO_MM = 0.6;
 
@@ -144,6 +147,108 @@ function drawModelTile(
   return canvas;
 }
 
+/** Tile container shared by both layer kinds; mul scales the user's radar opacity (used by the handover crossfade). */
+function makeTileDiv(ownerDocument: Document, nodes: Map<HTMLDivElement, number>, baseOpacity: number, mul: number) {
+  const div = ownerDocument.createElement('div');
+  div.style.width = '256px';
+  div.style.height = '256px';
+  div.style.overflow = 'hidden';
+  div.style.position = 'relative';
+  div.style.pointerEvents = 'none';
+  div.style.opacity = String(baseOpacity * mul);
+  nodes.set(div, mul);
+  return div;
+}
+
+/** RainViewer radar frame, with maxNativeZoom=7 upscaling so zoom > 7 in Ayr/Townsville scales cleanly. */
+function makeRadarLayer(
+  host: string,
+  framePath: string,
+  nodes: Map<HTMLDivElement, number>,
+  getOpacity: () => number,
+  mul: number,
+): google.maps.MapType {
+  return {
+    tileSize: new google.maps.Size(256, 256),
+    maxZoom: 18,
+    minZoom: 0,
+    name: 'RainViewer radar',
+    alt: 'RainViewer Precipitation Radar',
+    projection: null,
+    radius: 6378137,
+    getTile(coord: google.maps.Point, zoom: number, ownerDocument: Document): Element {
+      const div = makeTileDiv(ownerDocument, nodes, getOpacity(), mul);
+      const maxTiles = 1 << zoom;
+      const normX = ((coord.x % maxTiles) + maxTiles) % maxTiles;
+      const y = coord.y;
+      if (y < 0 || y >= maxTiles) return div;
+
+      const nativeZoom = Math.min(zoom, RAINVIEWER_MAX_NATIVE_ZOOM);
+      const factor = 1 << (zoom - nativeZoom);
+      const srcX = Math.floor(normX / factor);
+      const srcY = Math.floor(y / factor);
+      const subX = normX % factor;
+      const subY = y % factor;
+
+      const img = ownerDocument.createElement('img');
+      img.src = `${host}${framePath}/256/${nativeZoom}/${srcX}/${srcY}/1/1_1.png`;
+      img.alt = '';
+      img.draggable = false;
+      img.style.position = 'absolute';
+      img.style.maxWidth = 'none';
+      img.style.width = `${256 * factor}px`;
+      img.style.height = `${256 * factor}px`;
+      img.style.left = `${-subX * 256}px`;
+      img.style.top = `${-subY * 256}px`;
+      img.style.imageRendering = 'auto';
+      img.onerror = () => {
+        img.style.display = 'none';
+      };
+      div.appendChild(img);
+      return div;
+    },
+    releaseTile(tile: Element) {
+      nodes.delete(tile as HTMLDivElement);
+    },
+  };
+}
+
+/** Open-Meteo model rain for one (time-interpolated) frame, drawn client-side from the grid. */
+function makeModelLayer(
+  grid: ForecastGridResponse,
+  values: number[],
+  nodes: Map<HTMLDivElement, number>,
+  getOpacity: () => number,
+  mul: number,
+): google.maps.MapType {
+  return {
+    tileSize: new google.maps.Size(256, 256),
+    maxZoom: 18,
+    minZoom: 0,
+    name: 'Open-Meteo model rain forecast',
+    alt: 'Model rain forecast (Open-Meteo)',
+    projection: null,
+    radius: 6378137,
+    getTile(coord: google.maps.Point, zoom: number, ownerDocument: Document): Element {
+      const div = makeTileDiv(ownerDocument, nodes, getOpacity(), mul);
+      const n = 1 << zoom;
+      if (coord.y < 0 || coord.y >= n) return div;
+      const normX = ((coord.x % n) + n) % n;
+      const canvas = drawModelTile(ownerDocument, grid, values, normX, coord.y, zoom);
+      if (canvas) {
+        canvas.style.width = '256px';
+        canvas.style.height = '256px';
+        canvas.style.display = 'block';
+        div.appendChild(canvas);
+      }
+      return div;
+    },
+    releaseTile(tile: Element) {
+      nodes.delete(tile as HTMLDivElement);
+    },
+  };
+}
+
 export function WeatherTileOverlay({
   rainViewerHost,
   rainViewerFrame,
@@ -152,154 +257,59 @@ export function WeatherTileOverlay({
   visible,
 }: WeatherTileOverlayProps) {
   const map = useMap();
-  const overlayRef = useRef<google.maps.MapType | null>(null);
+  const layersRef = useRef<google.maps.MapType[]>([]);
   const opacityRef = useRef<number>(opacity);
-  const tileNodesRef = useRef<Set<HTMLDivElement>>(new Set());
+  /** Live tile containers → their opacity multiplier (1, or a handover crossfade weight). */
+  const tileNodesRef = useRef<Map<HTMLDivElement, number>>(new Map());
 
   opacityRef.current = Math.max(0, Math.min(1, opacity));
 
   useEffect(() => {
     if (!map) return;
 
-    const removeCurrentLayer = () => {
-      if (overlayRef.current) {
+    const removeLayers = () => {
+      for (const layer of layersRef.current) {
         // getArray() can be undefined if the Maps API failed (e.g. invalid key); don't crash the app tree.
-        const index = map.overlayMapTypes?.getArray?.()?.indexOf(overlayRef.current) ?? -1;
-        if (index !== -1) {
-          map.overlayMapTypes.removeAt(index);
-        }
-        overlayRef.current = null;
+        const index = map.overlayMapTypes?.getArray?.()?.indexOf(layer) ?? -1;
+        if (index !== -1) map.overlayMapTypes.removeAt(index);
       }
+      layersRef.current = [];
       tileNodesRef.current.clear();
     };
 
-    removeCurrentLayer();
+    removeLayers();
+    if (!visible || !rainViewerFrame) return;
 
-    if (!visible) return;
+    const host = rainViewerHost ? rainViewerHost.replace(/\/$/, '') : '';
+    const nodes = tileNodesRef.current;
+    const getOpacity = () => opacityRef.current;
+    const add = (layer: google.maps.MapType) => {
+      layersRef.current.push(layer);
+      map.overlayMapTypes.push(layer);
+    };
 
-    const modelValues =
-      rainViewerFrame?.kind === 'model' && forecastGrid && rainViewerFrame.gridIndex != null
-        ? forecastGrid.precip[rainViewerFrame.gridIndex]
-        : undefined;
-
-    if (forecastGrid && modelValues) {
-      const grid = forecastGrid;
-      const nodesSet = tileNodesRef.current;
-      const modelMapType: google.maps.MapType = {
-        tileSize: new google.maps.Size(256, 256),
-        maxZoom: 18,
-        minZoom: 0,
-        name: 'Open-Meteo model rain forecast',
-        alt: 'Model rain forecast (Open-Meteo)',
-        projection: null,
-        radius: 6378137,
-        getTile(coord: google.maps.Point, zoom: number, ownerDocument: Document): Element {
-          const div = ownerDocument.createElement('div');
-          div.style.width = '256px';
-          div.style.height = '256px';
-          div.style.pointerEvents = 'none';
-          div.style.opacity = String(opacityRef.current);
-          const n = 1 << zoom;
-          if (coord.y < 0 || coord.y >= n) return div;
-          const normX = ((coord.x % n) + n) % n;
-          const canvas = drawModelTile(ownerDocument, grid, modelValues, normX, coord.y, zoom);
-          if (canvas) {
-            canvas.style.width = '256px';
-            canvas.style.height = '256px';
-            canvas.style.imageRendering = 'auto';
-            div.appendChild(canvas);
-          }
-          nodesSet.add(div);
-          return div;
-        },
-        releaseTile(tile: Element) {
-          nodesSet.delete(tile as HTMLDivElement);
-        },
-      };
-      overlayRef.current = modelMapType;
-      map.overlayMapTypes.push(modelMapType);
-      return removeCurrentLayer;
+    if (rainViewerFrame.kind === 'model') {
+      const blend = rainViewerFrame.grid;
+      const from = blend ? forecastGrid?.precip[blend.from] : undefined;
+      const to = blend ? forecastGrid?.precip[blend.to] : undefined;
+      if (!forecastGrid || !blend || !from || !to) return removeLayers;
+      const values = blend.mix === 0 ? from : from.map((v, i) => v + ((to[i] ?? 0) - v) * blend.mix);
+      const handover = rainViewerFrame.handover;
+      // Last radar frame first so it sits beneath the model while it fades out.
+      if (handover && host) add(makeRadarLayer(host, handover.radarPath, nodes, getOpacity, handover.radar));
+      add(makeModelLayer(forecastGrid, values, nodes, getOpacity, handover?.model ?? 1));
+    } else if (host && rainViewerFrame.path) {
+      add(makeRadarLayer(host, rainViewerFrame.path, nodes, getOpacity, 1));
     }
 
-    if (rainViewerHost && rainViewerFrame?.path) {
-      const host = rainViewerHost.replace(/\/$/, '');
-      const framePath = rainViewerFrame.path;
-      const nodesSet = tileNodesRef.current;
+    return removeLayers;
+  }, [map, rainViewerHost, rainViewerFrame, forecastGrid, visible]);
 
-      // Custom MapType with maxNativeZoom=7 upscaling so zoom > 7 in Ayr/Townsville scales cleanly
-      const rainViewerMapType: google.maps.MapType = {
-        tileSize: new google.maps.Size(256, 256),
-        maxZoom: 18,
-        minZoom: 0,
-        name: `RainViewer ${rainViewerFrame.kind}`,
-        alt: 'RainViewer Precipitation Radar',
-        projection: null,
-        radius: 6378137,
-        getTile(coord: google.maps.Point, zoom: number, ownerDocument: Document): Element {
-          const div = ownerDocument.createElement('div');
-          div.style.width = '256px';
-          div.style.height = '256px';
-          div.style.overflow = 'hidden';
-          div.style.position = 'relative';
-          div.style.pointerEvents = 'none';
-          div.style.opacity = String(opacityRef.current);
-
-          const maxTiles = 1 << zoom;
-          const normX = ((coord.x % maxTiles) + maxTiles) % maxTiles;
-          const y = coord.y;
-
-          if (y < 0 || y >= maxTiles) {
-            return div;
-          }
-
-          const nativeZoom = Math.min(zoom, RAINVIEWER_MAX_NATIVE_ZOOM);
-          const scaleDiff = zoom - nativeZoom;
-          const factor = 1 << scaleDiff;
-          const srcX = Math.floor(normX / factor);
-          const srcY = Math.floor(y / factor);
-          const subX = normX % factor;
-          const subY = y % factor;
-
-          const tileUrl = `${host}${framePath}/256/${nativeZoom}/${srcX}/${srcY}/1/1_1.png`;
-
-          const img = ownerDocument.createElement('img');
-          img.src = tileUrl;
-          img.alt = '';
-          img.draggable = false;
-          img.style.position = 'absolute';
-          img.style.maxWidth = 'none';
-          img.style.width = `${256 * factor}px`;
-          img.style.height = `${256 * factor}px`;
-          img.style.left = `${-subX * 256}px`;
-          img.style.top = `${-subY * 256}px`;
-          img.style.imageRendering = 'auto';
-          img.onerror = () => {
-            img.style.display = 'none';
-          };
-
-          div.appendChild(img);
-          nodesSet.add(div);
-          return div;
-        },
-        releaseTile(tile: Element) {
-          nodesSet.delete(tile as HTMLDivElement);
-        },
-      };
-
-      overlayRef.current = rainViewerMapType;
-      map.overlayMapTypes.push(rainViewerMapType);
-
-      return removeCurrentLayer;
-    }
-
-    return removeCurrentLayer;
-  }, [map, rainViewerHost, rainViewerFrame?.path, rainViewerFrame?.time, rainViewerFrame?.kind, forecastGrid, visible]);
-
-  // Dynamically update opacity without rebuilding the layer
+  // Dynamically update opacity without rebuilding the layers
   useEffect(() => {
     const clamped = Math.max(0, Math.min(1, opacity));
-    tileNodesRef.current.forEach((node) => {
-      node.style.opacity = String(clamped);
+    tileNodesRef.current.forEach((mul, node) => {
+      node.style.opacity = String(clamped * mul);
     });
   }, [opacity]);
 

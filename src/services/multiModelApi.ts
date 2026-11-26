@@ -566,8 +566,46 @@ async function fetchRainViewerRadar(): Promise<{ host: string; generated: number
 }
 
 /**
+ * Model frame times after the last radar frame, clock-aligned: every 15 min for the first hour, every 30 min
+ * to +6 h, then hourly. Radar frames are 10 min apart; jumping straight to hourly frames made playback suddenly
+ * run 6x faster at the handover, so the step widens gradually instead.
+ */
+function modelFrameTimes(after: number, end: number): number[] {
+  const times: number[] = [];
+  let t = after;
+  for (;;) {
+    const ahead = t - after;
+    const step = (ahead < 3600 ? 15 : ahead < 6 * 3600 ? 30 : 60) * 60;
+    t = Math.floor(t / step) * step + step;
+    if (t > end) return times;
+    times.push(t);
+  }
+}
+
+/**
+ * Where time t falls between hourly grid steps. precip[i] is the rain over the hour ending at times[i],
+ * i.e. a rate centred on times[i] - 30 min, so interpolate between those midpoints (clamped at the ends).
+ */
+function gridBlendAt(times: number[], t: number): { from: number; to: number; mix: number } {
+  const mid = (i: number) => times[i] - 1800;
+  if (t <= mid(0)) return { from: 0, to: 0, mix: 0 };
+  for (let i = 0; i < times.length - 1; i++) {
+    if (t <= mid(i + 1)) return { from: i, to: i + 1, mix: (t - mid(i)) / (mid(i + 1) - mid(i)) };
+  }
+  const last = times.length - 1;
+  return { from: last, to: last, mix: 0 };
+}
+
+/** Opacity multipliers for the first model frames: the last radar frame dissolves into the model. */
+const HANDOVER_STEPS = [
+  { radar: 0.7, model: 0.55 },
+  { radar: 0.4, model: 0.8 },
+  { radar: 0.15, model: 1 },
+];
+
+/**
  * Radar timeline: RainViewer observed frames (plus nowcast, if RainViewer ever serves it again),
- * followed by hourly Open-Meteo model forecast frames for hours after the last radar frame.
+ * followed by Open-Meteo model forecast frames (interpolated from hourly steps) after the last radar frame.
  */
 export async function fetchRainViewerFrames(): Promise<RainViewerData | null> {
   const [radar, grid] = await Promise.all([fetchRainViewerRadar(), fetchForecastGrid()]);
@@ -576,11 +614,22 @@ export async function fetchRainViewerFrames(): Promise<RainViewerData | null> {
     ? radarFrames[radarFrames.length - 1].time
     : Math.floor(Date.now() / 1000);
 
-  const modelFrames: RainViewerFrame[] = grid
-    ? grid.times
-        .map((time, gridIndex) => ({ time, path: '', kind: 'model' as const, gridIndex }))
-        .filter((f) => f.time > lastRadarTime && Array.isArray(grid.precip[f.gridIndex]))
-    : [];
+  const lastRadarPath = radarFrames.length ? radarFrames[radarFrames.length - 1].path : '';
+  const gridUsable =
+    !!grid && grid.times.length > 0 && grid.times.every((_, i) => Array.isArray(grid.precip[i]));
+  const modelFrames: RainViewerFrame[] =
+    grid && gridUsable
+      ? modelFrameTimes(lastRadarTime, grid.times[grid.times.length - 1]).map((time, i) => {
+          const step = HANDOVER_STEPS[i];
+          return {
+            time,
+            path: '',
+            kind: 'model' as const,
+            grid: gridBlendAt(grid.times, time),
+            ...(step && lastRadarPath ? { handover: { radarPath: lastRadarPath, ...step } } : {}),
+          };
+        })
+      : [];
 
   const frames = [...radarFrames, ...modelFrames];
   if (frames.length === 0) return null;

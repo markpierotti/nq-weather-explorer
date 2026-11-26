@@ -1,153 +1,106 @@
-# Google Maps Weather Map & Forecast Explorer
+# NQ Weather Explorer
 
-An interactive global weather exploration application powered by the **Google Maps Platform Weather API**, **Weather Map Tiles**, and **Maps JavaScript API** (`@vis.gl/react-google-maps`).
+An operational weather, radar, and disaster corridor monitoring web app built for **North Queensland** and the **Bruce Highway (A1) corridor** (Ayr ↔ Home Hill ↔ Giru ↔ Townsville).
 
----
+During North Queensland's wet season, critical situational awareness is scattered across separate agency portals—BOM forecasts and river height bulletins, QLDTraffic road closures, Ergon outage maps, and Burdekin/Townsville disaster dashboards. **NQ Weather Explorer** unifies those live feeds onto a single dark-glass, mobile-first Google Maps interface with multi-model forecast consensus, Web Push corridor alerts, and a fail-closed, grounding-verified AI corridor briefing assistant.
 
-## Features
+## Key Capabilities
 
-- **Interactive Global Weather Map**: Smooth panning, zooming, and location selection powered by Google Maps Platform.
-- **Precipitation Radar Nowcast**: Weather tile layers with opacity and visibility controls supporting high-resolution regional feeds:
-  - `US_PRECIPITATION_CURRENT`: High-resolution United States precipitation nowcast.
-  - `EU_PRECIPITATION_CURRENT`: High-resolution European precipitation nowcast.
-- **Current Conditions**: Real-time temperature, feels-like, humidity, wind speed/direction/gusts, air pressure, UV index, and cloud cover.
-- **Hourly Forecast**: 24-hour detailed forecast with temperature, rain probability, and weather condition breakdowns.
-- **10-Day Extended Forecast**: Daily high/low temperatures, sunrise/sunset times, and precipitation chances.
-- **Minute-by-Minute Nowcast & Trend Analysis**: Real-time precipitation progression over the next 60 minutes with historical snapshot tracking and trend direction indicators (increasing, decreasing, steady rain, stable dry).
-- **Severe Weather Alerts**: Active meteorological warnings, watches, and advisories issued by national weather services worldwide.
-- **24-Hour Observed History**: Actual observed weather history over the past 24 hours.
-- **Places & Geocoding**: Search for any city, landmark, or region via Places API (New) with instant geocoding.
-- **On-Demand Geolocation**: Device location is strictly requested on-demand when the user clicks the "Find My Location" crosshairs button (no automatic prompts on initial load).
+- **4-Model Forecast Consensus & Spread:** Side-by-side comparison of **Google WeatherNext 2**, **BOM**, **ECMWF IFS**, and **NOAA GFS** (plus on-demand **WeatherNext 3** in Cyclone Mode) with temperature/rainfall spread indicators so you can see where models agree or diverge.
+- **Animated Radar Timeline:** RainViewer past + nowcast radar tile overlays with play/pause, speed toggle, opacity slider, and interactive scrubbing.
+- **Live NQ Emergency & Corridor Layers:**
+  - **QLDTraffic road events & closures** (Bruce Highway A1 corridor highlighted)
+  - **BOM QLD official warnings** (flood, severe thunderstorm, cyclone)
+  - **Live BOM river height gauges** (Burdekin, Haughton/Giru, Ross, Bohle, Alligator Creek, Black River) with 24-hour SVG sparklines, rising/falling trends, and official Minor/Moderate/Major flood thresholds
+  - **Burdekin & Townsville council disaster feeds** (power outages, QFD incidents, evacuation centres, sandbags, fuel)
+  - **Collapsible Map Legend** synced to active emergency layers
+- **Web Push Corridor Alerts:** Opt-in browser push notifications (VAPID / `web-push`) backed by a server-side poller with deduplication for new road closures, BOM warnings, and rising river gauges.
+- **Life-Safety-Hardened AI Corridor Briefing & Follow-Up Chat:**
+  - Pulls live QLDTraffic, BOM warnings, and river gauge records directly from the server cache into a timestamped **Fact Ledger** (never relying solely on truncated client summaries).
+  - Routes follow-up questions by intent (`road_corridor`, `river_flood`, `cyclone_wind`, `rain_forecast`) so a query like *"Is the Bruce Hwy open between Townsville and Ayr?"* zooms strictly into relevant corridor events and gauges.
+  - Enforces **fail-closed** rules (`temperature: 0.1`, disables open web search on live road/gauge telemetry when official feeds are healthy, never infers "all clear" from zero alerts, and flags stale/unavailable feeds as blind spots).
+  - Optional **Google Cloud Discovery Engine `CheckGrounding`** verification gate (`server/grounding.ts`) scores every claim against the live Fact Ledger and falls back to raw verified feed records if grounding drops below threshold.
+- **Mobile-First & Desktop Responsive:** Draggable bottom sheet and tab bar on mobile; collapsible glass sidebar on desktop; on-demand geolocation only.
 
----
+## Architecture & Dual-Key Security Model
 
-## Architecture & Security: Two-Key Model
+All API keys are read from `.env` at runtime—zero secrets are hardcoded or bundled into client assets:
 
-The application enforces a **strict dual-key separation** to adhere to Google Maps Platform security best practices with **zero hardcoded API keys**:
-
+```text
+                         ┌───────────────────────────┐
+                         │  .env / runtime env vars  │
+                         └─────────────┬─────────────┘
+                                       │
+          ┌────────────────────────────┴────────────────────────────┐
+          ▼                                                         ▼
+┌──────────────────────────────┐                  ┌───────────────────────────────────────┐
+│   VITE_GOOGLE_MAPS_API_KEY   │                  │           Server-Only Keys            │
+│    (Public Browser Key)      │                  │  (Express backend — never in client)  │
+├──────────────────────────────┤                  ├───────────────────────────────────────┤
+│ • Maps JavaScript API        │                  │ • GOOGLE_WEATHER_API_KEY              │
+│ • Places UI Kit              │                  │ • GEMINI_API_KEY                      │
+│ • HTTP referrer restricted   │                  │ • QLDTRAFFIC_API_KEY (optional)       │
+│ • Served via /api/weather/   │                  │ • VAPID_PRIVATE_KEY (Web Push)        │
+│   config at runtime          │                  │ • GOOGLE_APPLICATION_CREDENTIALS      │
+└──────────────────────────────┘                  │   (Discovery Engine CheckGrounding)   │
+                                                  └───────────────────────────────────────┘
 ```
-                       ┌─────────────────────────┐
-                       │   .env file /           │
-                       │   environment vars      │
-                       └────────────┬────────────┘
-                                    │
-           ┌────────────────────────┴────────────────────────┐
-           │                                                 │
-           ▼                                                 ▼
-┌─────────────────────────────┐           ┌──────────────────────────────────────┐
-│  VITE_GOOGLE_MAPS_API_KEY   │           │        GOOGLE_WEATHER_API_KEY        │
-│   (Public Client Key)       │           │         (Secret Backend Key)         │
-├─────────────────────────────┤           ├──────────────────────────────────────┤
-│ - Maps JavaScript API       │           │ - Google Weather API                 │
-│ - Places UI Kit             │           │ - Places API (New) backend proxy     │
-│ - Client map canvas         │           │ - Geocoding REST API proxy           │
-│ - Restricted by HTTP origin │           │ - Weather Map Tiles proxy            │
-│                             │           │ - NEVER revealed to client browsers  │
-└─────────────────────────────┘           └──────────────────────────────────────┘
-```
 
-### Environment Variables
+## Tech Stack
 
-Configure these variables in your `.env` file (see `.env.example`):
+- **Frontend:** React 19, TypeScript 5.8, Vite 6, Tailwind CSS v4, `@vis.gl/react-google-maps`, `motion`, `lucide-react`
+- **Backend:** Express 4 (`server.ts`, `server/feeds/`, `server/push/`, `server/briefing.ts`, `server/grounding.ts`), `@google/genai`, `fast-xml-parser`, `web-push`
+- **Deployment:** Docker + Docker Compose behind a TLS reverse proxy (Caddy/nginx)
 
-| Variable | Scope | Purpose |
+## API Overview
+
+| Endpoint | Method | Purpose |
 | :--- | :--- | :--- |
-| `VITE_GOOGLE_MAPS_API_KEY` | Client & Backend | Public key used by the browser to load Google Maps JavaScript API and Places UI Kit. |
-| `GOOGLE_WEATHER_API_KEY` | Backend Only | Secret server-side key for Google Maps Platform Weather, Geocoding, and Places REST APIs. |
-| `GEMINI_API_KEY` | Backend Only | Gemini key for AI corridor briefings and cyclone synthesis (optional). |
-| `GEMINI_MODEL` | Backend Only | Gemini model ID override for briefings. |
-| `PORT` | Backend | Port for Express & Vite dev server (defaults to `3000`). |
-| `TRUST_PROXY` | Backend | Number of reverse-proxy hops in front of the app (defaults to `1`). |
-
-> **Security Note**: `GOOGLE_WEATHER_API_KEY` is kept strictly on the backend inside `server.ts` and is never sent to the browser or bundled into client assets. All source code files contain zero hardcoded API keys.
-
----
-
-## API Endpoints (Backend Proxy)
-
-The backend Express server (`server.ts`) acts as a secure reverse proxy for Google Maps Platform services:
-
-| Endpoint | Method | Description |
-| :--- | :--- | :--- |
-| `/api/weather/config` | `GET` | Returns client map configuration and public Maps JS API key. |
-| `/api/weather/current` | `GET` | Current weather conditions for `lat` and `lng`. |
-| `/api/weather/forecast/hourly` | `GET` | 24-hour hourly forecast. |
-| `/api/weather/forecast/daily` | `GET` | Up to 10-day daily forecast. |
-| `/api/weather/forecast/minutes` | `GET` | 60-minute nowcast segments (US & parts of Europe). |
-| `/api/weather/alerts` | `GET` | Active severe weather alerts. |
-| `/api/weather/history/hourly` | `GET` | Past 24 hours of observed weather history. |
-| `/api/weather/tiles/:mapType/:z/:x/:y` | `GET` | Proxied Google Weather Map radar tiles. |
-| `/api/geocode` | `GET` | Address-to-coordinates geocoding. |
-| `/api/geocode/reverse` | `GET` | Coordinates-to-place reverse geocoding. |
-| `/api/places/nearby` | `GET`/`POST` | Places API (New) nearby search for location resolution. |
-
----
+| `/api/weather/config` | `GET` | Public Maps JS client configuration |
+| `/api/weather/*` | `GET` | Server-side Google Weather, Geocoding, and Places proxies |
+| `/api/emergency/traffic` | `GET` | Cached QLDTraffic road events & closures (3-min TTL) |
+| `/api/emergency/bom-warnings` | `GET` | Cached official BOM QLD warnings (3-min TTL) |
+| `/api/emergency/gauges` | `GET` | Cached BOM river height gauges + 24h history & flood thresholds (5-min TTL) |
+| `/api/push/*` | `GET`/`POST`/`DELETE` | VAPID public key, push subscription management, and test notification |
+| `/api/briefing/corridor` | `POST` | Structured 4-section operational briefing + feed health + optional `CheckGrounding` score |
+| `/api/briefing/chat` | `POST` | SSE corridor follow-up chat with intent routing and optional verify-before-send grounding |
+| `/api/briefing/cyclone` | `POST` | On-demand Coral Sea / NQ cyclone threat synthesis |
 
 ## Getting Started
 
 ### Prerequisites
 
 - Node.js 20+
-- A Google Cloud project with the following APIs enabled:
-  - **Maps JavaScript API**
-  - **Places API (New)**
-  - **Geocoding API**
-  - **Google Maps Platform Weather API**
+- A Google Cloud project with **Maps JavaScript API**, **Places API (New)**, **Geocoding API**, and **Weather API** enabled (plus **Gemini API** and optionally **Discovery Engine API** for AI briefings and `CheckGrounding`).
 
-### Installation
+### Local Setup
 
-1. Install dependencies:
-   ```bash
-   npm install
-   ```
-
-2. Copy the environment template:
-   ```bash
-   cp .env.example .env
-   ```
-
-3. Add your keys to `.env`:
-   ```bash
-   VITE_GOOGLE_MAPS_API_KEY="your-maps-js-api-key"
-   GOOGLE_WEATHER_API_KEY="your-weather-services-api-key"
-   ```
-
-### Running Locally
-
-Start the full-stack development server on port 3000:
 ```bash
+npm install
+cp .env.example .env
+# Fill in your keys in .env
 npm run dev
 ```
 
-Visit `http://localhost:3000` in your browser.
+Open `http://localhost:3000`.
 
-### Building for Production
+### Build, Type Check & Docker
 
-Compile the client bundle and backend server:
 ```bash
-npm run build
-npm start
+npm run lint     # TypeScript check (tsc --noEmit)
+npm run build    # Production client (Vite) + server bundle (esbuild -> dist/server.cjs)
+npm start        # Run production server
 ```
 
-### Deploying with Docker (VPS)
+For VPS deployment with Docker:
 
 ```bash
-cp .env.example .env   # fill in keys
+cp .env.example .env
 docker compose up -d --build
 ```
 
-The app listens on port 3000. Put a TLS-terminating reverse proxy (Caddy or nginx) in front of it — HTTPS is required for geolocation and push notifications on phones. `./data` is mounted into the container for persistent server state.
-
-Keys are read from `.env` at runtime (the browser fetches the public Maps key from `/api/weather/config`), so the image itself contains no secrets.
-
-### Type Checking & Linting
-
-```bash
-npm run lint
-```
-
----
+Place a TLS-terminating reverse proxy (Caddy or nginx) in front of port `3000`—HTTPS is required for browser geolocation and Web Push notifications on mobile devices.
 
 ## License
 
-This project is licensed under the Apache 2.0 License.
+Licensed under the [Apache License 2.0](LICENSE).

@@ -61,7 +61,7 @@ export function MapFloatingControls({ onLocateUser, isLocating }: MapFloatingCon
         data-layers-toggle
         onClick={() => onSetLayersMenuOpen(!isLayersMenuOpen)}
         className={`${btn} ${
-          isLayersMenuOpen ? 'text-white bg-[#32ADE6]/80 border-[#32ADE6]' : 'text-[#32ADE6] hover:bg-[#3a3a3c] hover:text-white'
+          isLayersMenuOpen ? 'text-[#111113] bg-[#32ADE6] border-[#32ADE6]' : 'text-[#32ADE6] hover:bg-[#3a3a3c] hover:text-white'
         }`}
         title="Map layers"
         aria-label="Map layers"

@@ -81,7 +81,7 @@ function CollapsedDock({ onOpenAddLocation }: { onOpenAddLocation: () => void })
                 type="button"
                 onClick={() => onSelectLocation(loc)}
                 className={`px-2.5 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap shrink-0 cursor-pointer transition-colors ${
-                  active ? 'bg-[#32ADE6] text-white' : 'text-white/75 hover:bg-white/10 hover:text-white'
+                  active ? 'bg-[#32ADE6] text-[#111113]' : 'text-white/75 hover:bg-white/10 hover:text-white'
                 }`}
               >
                 {loc.name}

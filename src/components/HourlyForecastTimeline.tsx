@@ -50,7 +50,7 @@ export function HourlyForecastTimeline({ hourly = [], historyHours = [] }: Hourl
             onClick={() => setViewMode('FORECAST')}
             className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer flex items-center gap-1 text-[11px] whitespace-nowrap shrink-0 ${
               viewMode === 'FORECAST'
-                ? 'bg-[#32ADE6] text-white font-semibold'
+                ? 'bg-[#32ADE6] text-[#111113] font-semibold'
                 : 'text-white/65 hover:text-white'
             }`}
           >

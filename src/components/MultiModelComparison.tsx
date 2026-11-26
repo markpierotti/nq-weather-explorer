@@ -79,7 +79,7 @@ export function MultiModelComparison({
         <button
           type="button"
           onClick={onRefresh}
-          className="px-3 py-1.5 rounded-[10px] bg-[#32ADE6] text-white font-semibold hover:bg-[#4cbdf0] cursor-pointer"
+          className="px-3 py-1.5 rounded-[10px] bg-[#32ADE6] text-[#111113] font-semibold hover:bg-[#4cbdf0] cursor-pointer"
         >
           Retry
         </button>
@@ -293,7 +293,7 @@ export function MultiModelComparison({
                 type="button"
                 onClick={() => setHourlyMetric(m)}
                 className={`px-2.5 py-1 rounded-md font-medium whitespace-nowrap shrink-0 cursor-pointer transition-colors ${
-                  hourlyMetric === m ? 'bg-[#32ADE6] text-white font-semibold' : 'text-white/65 hover:text-white'
+                  hourlyMetric === m ? 'bg-[#32ADE6] text-[#111113] font-semibold' : 'text-white/65 hover:text-white'
                 }`}
               >
                 {m === 'rain' ? 'Rain' : m === 'temp' ? 'Temp' : 'Wind'}

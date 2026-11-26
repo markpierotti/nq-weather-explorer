@@ -471,7 +471,7 @@ export function CorridorBriefingCard({
           type="button"
           onClick={handleGenerateBriefing}
           disabled={isLoading}
-          className="px-3 py-1.5 rounded-[10px] bg-[#32ADE6] hover:bg-[#4cbdf0] disabled:bg-white/15 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+          className="px-3 py-1.5 rounded-[10px] bg-[#32ADE6] hover:bg-[#4cbdf0] disabled:bg-white/15 text-[#111113] disabled:text-white text-xs font-semibold flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
           <span>{briefing ? 'Refresh' : 'Generate'}</span>
@@ -761,7 +761,7 @@ export function CorridorBriefingCard({
               <button
                 type="submit"
                 disabled={isChatStreaming || !chatInput.trim()}
-                className="p-2 rounded-xl bg-[#32ADE6] hover:bg-[#4cbdf0] disabled:bg-white/10 disabled:text-white/30 text-white transition-colors shrink-0 cursor-pointer"
+                className="p-2 rounded-xl bg-[#32ADE6] hover:bg-[#4cbdf0] disabled:bg-white/10 disabled:text-white/30 text-[#111113] transition-colors shrink-0 cursor-pointer"
                 aria-label="Send follow-up question"
               >
                 <Send className="w-3.5 h-3.5" />

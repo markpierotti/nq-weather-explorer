@@ -268,7 +268,7 @@ export function CorridorAlerts() {
         {subscribed ? (
           <BellRing className="w-4 h-4 text-[#34c759] shrink-0" />
         ) : (
-          <BellOff className="w-4 h-4 text-white/45 shrink-0" />
+          <BellOff className="w-4 h-4 text-white/60 shrink-0" />
         )}
         <span className="flex-1 text-left font-semibold text-white">
           Corridor Alerts
@@ -276,14 +276,14 @@ export function CorridorAlerts() {
         <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
           subscribed
             ? 'bg-[#34c759]/20 text-[#34c759]'
-            : 'bg-white/10 text-white/50'
+            : 'bg-white/10 text-white/60'
         }`}>
           {subscribed ? 'ON' : 'OFF'}
         </span>
         {expanded ? (
-          <ChevronUp className="w-3.5 h-3.5 text-white/50" />
+          <ChevronUp className="w-3.5 h-3.5 text-white/60" />
         ) : (
-          <ChevronDown className="w-3.5 h-3.5 text-white/50" />
+          <ChevronDown className="w-3.5 h-3.5 text-white/60" />
         )}
       </button>
 
@@ -312,8 +312,8 @@ export function CorridorAlerts() {
             <>
               {/* Corridor Tags */}
               <div>
-                <div className="text-[10px] uppercase tracking-wider text-white/45 font-mono mb-1.5">
-                  Corridor Tags {corridorTags.length === 0 && <span className="text-white/35">(all corridor items)</span>}
+                <div className="text-[10px] uppercase tracking-wider text-white/60 font-mono mb-1.5">
+                  Corridor Tags {corridorTags.length === 0 && <span className="text-white/60">(all corridor items)</span>}
                 </div>
                 <div className="flex flex-wrap gap-1">
                   {CORRIDOR_TAGS.map((tag) => (
@@ -324,7 +324,7 @@ export function CorridorAlerts() {
                       className={`min-h-8 lg:min-h-0 px-2 py-1 rounded-md text-[10px] font-medium border transition-colors cursor-pointer ${
                         corridorTags.includes(tag)
                           ? 'bg-[#ff9500]/20 border-[#ff9500]/40 text-[#ff9500]'
-                          : 'bg-white/[0.06] border-white/10 text-white/50 hover:text-white/70'
+                          : 'bg-white/[0.06] border-white/10 text-white/60 hover:text-white/70'
                       }`}
                     >
                       {tag}
@@ -335,7 +335,7 @@ export function CorridorAlerts() {
 
               {/* Categories */}
               <div>
-                <div className="text-[10px] uppercase tracking-wider text-white/45 font-mono mb-1.5">
+                <div className="text-[10px] uppercase tracking-wider text-white/60 font-mono mb-1.5">
                   Categories
                 </div>
                 <div className="flex flex-wrap gap-1.5">
@@ -347,7 +347,7 @@ export function CorridorAlerts() {
                       className={`min-h-8 lg:min-h-0 px-2.5 py-1 rounded-md text-[10px] font-medium border transition-colors cursor-pointer ${
                         categories.includes(cat.id)
                           ? 'bg-[#32ADE6]/20 border-[#32ADE6]/40 text-[#32ADE6]'
-                          : 'bg-white/[0.06] border-white/10 text-white/50 hover:text-white/70'
+                          : 'bg-white/[0.06] border-white/10 text-white/60 hover:text-white/70'
                       }`}
                     >
                       {cat.label}
@@ -358,7 +358,7 @@ export function CorridorAlerts() {
 
               {/* Min Severity */}
               <div>
-                <div className="text-[10px] uppercase tracking-wider text-white/45 font-mono mb-1.5">
+                <div className="text-[10px] uppercase tracking-wider text-white/60 font-mono mb-1.5">
                   Minimum Severity
                 </div>
                 <div className="flex gap-1.5">
@@ -370,7 +370,7 @@ export function CorridorAlerts() {
                       className={`min-h-8 lg:min-h-0 px-2.5 py-1 rounded-md text-[10px] font-medium border transition-colors cursor-pointer ${
                         minSeverity === s.id
                           ? `bg-white/15 border-white/30 ${s.color} font-semibold`
-                          : 'bg-white/[0.06] border-white/10 text-white/50 hover:text-white/70'
+                          : 'bg-white/[0.06] border-white/10 text-white/60 hover:text-white/70'
                       }`}
                     >
                       {s.label}

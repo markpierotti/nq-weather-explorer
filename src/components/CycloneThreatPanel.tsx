@@ -149,7 +149,7 @@ export function CycloneThreatPanel({
             <span className="font-semibold text-white">
               Optional Local Key (<code className="font-mono text-[10px]">wn3_api_key</code>)
             </span>
-            <span className="text-[10px] text-white/50">Stored in browser</span>
+            <span className="text-[10px] text-white/60">Stored in browser</span>
           </div>
           <div className="flex items-center gap-1.5">
             <input
@@ -157,7 +157,7 @@ export function CycloneThreatPanel({
               value={draftKey}
               onChange={(e) => setDraftKey(e.target.value)}
               placeholder="Optional override…"
-              className="flex-1 min-w-0 px-2.5 py-1.5 rounded-lg border border-white/15 bg-white/10 text-xs text-white placeholder:text-white/40 focus:outline-none focus:border-[#32ADE6] font-mono"
+              className="flex-1 min-w-0 px-2.5 py-1.5 rounded-lg border border-white/15 bg-white/10 text-xs text-white placeholder:text-white/60 focus:outline-none focus:border-[#32ADE6] font-mono"
             />
             <button
               type="button"
@@ -185,7 +185,7 @@ export function CycloneThreatPanel({
               </button>
             )}
           </div>
-          <p className="text-[10px] text-white/55 leading-snug">
+          <p className="text-[10px] text-white/65 leading-snug">
             Server <code className="font-mono">GOOGLE_WEATHER_API_KEY</code> proxy is checked first and cached 30 min per coordinate.
           </p>
         </div>
@@ -216,7 +216,7 @@ export function CycloneThreatPanel({
         <div className="space-y-2.5">
           <div className="grid grid-cols-2 gap-2.5 tabular-nums">
             <div className="rounded-xl bg-white/[0.08] border border-white/10 p-2.5">
-              <div className="text-[10px] font-mono uppercase tracking-wider text-white/55 flex items-center gap-1">
+              <div className="text-[10px] font-mono uppercase tracking-wider text-white/65 flex items-center gap-1">
                 <Wind className="w-3 h-3 text-[#ff3b30]" />
                 <span>Peak Gust</span>
               </div>
@@ -226,7 +226,7 @@ export function CycloneThreatPanel({
             </div>
 
             <div className="rounded-xl bg-white/[0.08] border border-white/10 p-2.5">
-              <div className="text-[10px] font-mono uppercase tracking-wider text-white/55 flex items-center gap-1">
+              <div className="text-[10px] font-mono uppercase tracking-wider text-white/65 flex items-center gap-1">
                 <Gauge className="w-3 h-3 text-[#5856d6]" />
                 <span>Min Pressure</span>
               </div>
@@ -241,7 +241,7 @@ export function CycloneThreatPanel({
             </div>
 
             <div className="rounded-xl bg-white/[0.08] border border-white/10 p-2.5">
-              <div className="text-[10px] font-mono uppercase tracking-wider text-white/55 flex items-center gap-1">
+              <div className="text-[10px] font-mono uppercase tracking-wider text-white/65 flex items-center gap-1">
                 <AlertTriangle className="w-3 h-3 text-[#ff9500]" />
                 <span>Storm Prob</span>
               </div>
@@ -251,14 +251,14 @@ export function CycloneThreatPanel({
             </div>
 
             <div className="rounded-xl bg-white/[0.08] border border-white/10 p-2.5">
-              <div className="text-[10px] font-mono uppercase tracking-wider text-white/55 flex items-center gap-1">
+              <div className="text-[10px] font-mono uppercase tracking-wider text-white/65 flex items-center gap-1">
                 <CloudRain className="w-3 h-3 text-[#32ADE6]" />
                 <span>1h / 5d QPF</span>
               </div>
               <div className="font-mono font-semibold text-base text-white mt-1">
                 {fmtRain(wn3Bundle.peak1hQpfMm)}
                 {wn3Bundle.total120hQpfMm !== null && (
-                  <span className="text-[10px] font-normal text-white/55 ml-1">
+                  <span className="text-[10px] font-normal text-white/65 ml-1">
                     ({fmtRain(wn3Bundle.total120hQpfMm)})
                   </span>
                 )}
@@ -280,7 +280,7 @@ export function CycloneThreatPanel({
             </div>
           )}
 
-          <div className="flex items-center justify-between text-[10px] font-mono text-white/50 tabular-nums">
+          <div className="flex items-center justify-between text-[10px] font-mono text-white/60 tabular-nums">
             <span>
               {wn3Bundle.fromCache ? `Cached (${cacheMinutesAgo}m ago · 30m TTL)` : 'Fresh fetch · cached 30m'}
             </span>
@@ -309,19 +309,19 @@ export function CycloneThreatPanel({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
               <div className="rounded-lg bg-white/[0.06] border border-white/10 p-2">
-                <div className="text-[10px] font-mono uppercase tracking-wider text-white/50">Peak Gusts</div>
+                <div className="text-[10px] font-mono uppercase tracking-wider text-white/60">Peak Gusts</div>
                 <div className="text-white font-medium mt-0.5">{cycloneSynthesis.peakGusts}</div>
               </div>
               <div className="rounded-lg bg-white/[0.06] border border-white/10 p-2">
-                <div className="text-[10px] font-mono uppercase tracking-wider text-white/50">Corridor Window</div>
+                <div className="text-[10px] font-mono uppercase tracking-wider text-white/60">Corridor Window</div>
                 <div className="text-white font-medium mt-0.5">{cycloneSynthesis.corridorWindow}</div>
               </div>
               <div className="rounded-lg bg-white/[0.06] border border-white/10 p-2">
-                <div className="text-[10px] font-mono uppercase tracking-wider text-white/50">Rainfall Range</div>
+                <div className="text-[10px] font-mono uppercase tracking-wider text-white/60">Rainfall Range</div>
                 <div className="text-white font-medium mt-0.5">{cycloneSynthesis.rainfallRange}</div>
               </div>
               <div className="rounded-lg bg-white/[0.06] border border-white/10 p-2">
-                <div className="text-[10px] font-mono uppercase tracking-wider text-white/50">Bruce Hwy Note</div>
+                <div className="text-[10px] font-mono uppercase tracking-wider text-white/60">Bruce Hwy Note</div>
                 <div className="text-white font-medium mt-0.5">{cycloneSynthesis.bruceHwyDetail}</div>
               </div>
             </div>
@@ -339,7 +339,7 @@ export function CycloneThreatPanel({
 
             {cycloneSynthesis.citations.length > 0 && (
               <div className="pt-2 border-t border-white/10 flex flex-wrap items-center gap-x-3 gap-y-1">
-                <span className="text-[10px] text-white/50 flex items-center gap-1">
+                <span className="text-[10px] text-white/60 flex items-center gap-1">
                   <Globe className="w-3 h-3" /> Sources:
                 </span>
                 {cycloneSynthesis.citations.slice(0, 4).map((c) => (

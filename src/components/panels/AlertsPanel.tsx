@@ -52,7 +52,7 @@ export function AlertsPanel() {
 
       {emergencyWarnings.length > 0 && (
         <div className="ios-bento-card p-4 space-y-2">
-          <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-white/50">
+          <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-white/60">
             Emergency Feed Warnings ({emergencyWarnings.length})
           </div>
           {emergencyWarnings.map((item) => {
@@ -62,7 +62,7 @@ export function AlertsPanel() {
                 <ShieldAlert className="w-4 h-4 text-[#ff3b30] shrink-0 mt-0.5" />
                 <div className="min-w-0 flex-1">
                   <div className="text-xs font-semibold text-white leading-snug">{item.title}</div>
-                  <div className="text-[11px] text-white/55">{item.sourceLabel}</div>
+                  <div className="text-[11px] text-white/65">{item.sourceLabel}</div>
                 </div>
                 {canFocus && (
                   <button

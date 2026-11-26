@@ -72,7 +72,7 @@ export function WeatherAlertBanner({ alerts }: WeatherAlertBannerProps) {
                   </div>
                 )}
                 {alert.senderName && (
-                  <div className="text-[10px] text-white/45 font-mono">
+                  <div className="text-[10px] text-white/60 font-mono">
                     Issued by {alert.senderName}
                   </div>
                 )}

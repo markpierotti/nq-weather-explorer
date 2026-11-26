@@ -134,7 +134,7 @@ function GroundingStatusBar({
         )}
       </div>
 
-      <p className="text-[10px] text-white/45 leading-snug">
+      <p className="text-[10px] text-white/60 leading-snug">
         Verify live conditions on QLDTraffic &amp; BOM before travelling — never drive through floodwater.
       </p>
     </div>
@@ -458,11 +458,11 @@ export function CorridorBriefingCard({
     <div className="ios-bento-card p-4 space-y-3">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-white/50 flex items-center gap-1.5">
+          <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-white/60 flex items-center gap-1.5">
             <Sparkles className="w-3.5 h-3.5 text-[#32ADE6]" />
             <span>AI Corridor Briefing</span>
           </div>
-          <p className="text-[11px] text-white/55 mt-1">
+          <p className="text-[11px] text-white/65 mt-1">
             Live-feed grounded synthesis · QLDTraffic + BOM + Gauges
           </p>
         </div>
@@ -601,8 +601,8 @@ export function CorridorBriefingCard({
 
           {briefing.citations.length > 0 && (
             <div className="pt-2.5 border-t border-white/10 space-y-1">
-              <div className="text-[10px] font-mono uppercase tracking-wider text-white/50 flex items-center gap-1">
-                <Globe className="w-3 h-3 text-white/45" />
+              <div className="text-[10px] font-mono uppercase tracking-wider text-white/60 flex items-center gap-1">
+                <Globe className="w-3 h-3 text-white/60" />
                 <span>Search Grounding Sources</span>
               </div>
               <div className="flex flex-wrap gap-x-3 gap-y-1">
@@ -627,7 +627,7 @@ export function CorridorBriefingCard({
             feedHealth={briefing.feedHealth}
           />
 
-          <div className="text-[10px] font-mono text-white/40 flex items-center justify-between pt-2 border-t border-white/10 tabular-nums">
+          <div className="text-[10px] font-mono text-white/60 flex items-center justify-between pt-2 border-t border-white/10 tabular-nums">
             <span>{briefing.model}</span>
             <span>
               {new Date(briefing.generatedAt).toLocaleTimeString('en-AU', {
@@ -652,9 +652,9 @@ export function CorridorBriefingCard({
             <MessageSquare className="w-3.5 h-3.5 text-[#32ADE6]" />
             <span>Ask a corridor question</span>
             {chatOpen ? (
-              <ChevronUp className="w-3.5 h-3.5 text-white/50" />
+              <ChevronUp className="w-3.5 h-3.5 text-white/60" />
             ) : (
-              <ChevronDown className="w-3.5 h-3.5 text-white/50" />
+              <ChevronDown className="w-3.5 h-3.5 text-white/60" />
             )}
           </button>
 
@@ -662,7 +662,7 @@ export function CorridorBriefingCard({
             <button
               type="button"
               onClick={handleClearChat}
-              className="text-[11px] text-white/45 hover:text-white/80 inline-flex items-center gap-1 cursor-pointer"
+              className="text-[11px] text-white/60 hover:text-white/80 inline-flex items-center gap-1 cursor-pointer"
               title="Clear follow-up chat"
             >
               <Trash2 className="w-3 h-3" />
@@ -704,7 +704,7 @@ export function CorridorBriefingCard({
                       {turn.text ? (
                         renderBoldMarkdown(turn.text)
                       ) : (
-                        <span className="text-white/45 italic">Checking live feeds…</span>
+                        <span className="text-white/60 italic">Checking live feeds…</span>
                       )}
                       {turn.isStreaming && turn.text && (
                         <span className="inline-block w-1.5 h-3 bg-[#32ADE6] ml-0.5 align-middle animate-pulse" />
@@ -756,7 +756,7 @@ export function CorridorBriefingCard({
                 onChange={(e) => setChatInput(e.target.value)}
                 disabled={isChatStreaming}
                 placeholder={`Ask about ${selectedLocation.name}…`}
-                className="flex-1 min-w-0 rounded-xl bg-white/[0.06] border border-white/[0.1] px-3 py-1.5 text-xs text-white placeholder:text-white/40 focus:outline-none focus:border-[#32ADE6]/60"
+                className="flex-1 min-w-0 rounded-xl bg-white/[0.06] border border-white/[0.1] px-3 py-1.5 text-xs text-white placeholder:text-white/60 focus:outline-none focus:border-[#32ADE6]/60"
               />
               <button
                 type="submit"

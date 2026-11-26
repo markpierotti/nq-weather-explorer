@@ -59,7 +59,7 @@ export function CurrentHero() {
         {todayRow ? (
           <>
             <span>H:{fmtRangeTemp(todayRow.meanMaxTemp)}</span>
-            <span className="mx-2 text-white/40">·</span>
+            <span className="mx-2 text-white/60">·</span>
             <span>L:{fmtRangeTemp(todayRow.meanMinTemp)}</span>
           </>
         ) : (
@@ -67,7 +67,7 @@ export function CurrentHero() {
         )}
       </div>
 
-      <div className="text-[11px] font-mono tabular-nums text-white/45 mt-1 flex items-center justify-center gap-1.5">
+      <div className="text-[11px] font-mono tabular-nums text-white/60 mt-1 flex items-center justify-center gap-1.5">
         <MapPin className="w-3 h-3 text-[#32ADE6]" />
         <span>{formatCoords(selectedLocation.lat, selectedLocation.lng)}</span>
       </div>

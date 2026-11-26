@@ -169,7 +169,7 @@ export function EmergencyDrawer({
       {/* Header + Emergency Switch */}
       <div className="ios-bento-card p-3.5 flex items-center justify-between gap-2">
         <div>
-          <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-white/50">
+          <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-white/60">
             Closures, Outages & Warnings
           </div>
           <p className="text-[11px] text-white/65 mt-0.5">
@@ -277,13 +277,13 @@ export function EmergencyDrawer({
         <>
           {/* Search */}
           <div className="relative">
-            <Search className="w-3.5 h-3.5 text-white/45 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <Search className="w-3.5 h-3.5 text-white/60 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Filter Bruce Hwy, Ayr, Giru, Home Hill, Townsville…"
-              className="w-full pl-8 pr-3 py-2.5 lg:py-2 rounded-xl bg-white/10 border border-white/10 text-base lg:text-xs text-white placeholder:text-white/45 focus:outline-none focus:border-[#32ADE6]"
+              className="w-full pl-8 pr-3 py-2.5 lg:py-2 rounded-xl bg-white/10 border border-white/10 text-base lg:text-xs text-white placeholder:text-white/60 focus:outline-none focus:border-[#32ADE6]"
             />
           </div>
 
@@ -346,7 +346,7 @@ export function EmergencyDrawer({
                       <div className="flex items-start gap-2.5 min-w-0 flex-1">
                         <div className="mt-0.5">{getCategoryIcon(item.category)}</div>
                         <div className="min-w-0 flex-1">
-                          <div className="text-[11px] text-white/55 flex flex-wrap items-center gap-1.5">
+                          <div className="text-[11px] text-white/65 flex flex-wrap items-center gap-1.5">
                             <span className="font-semibold text-white/85">
                               {getCategoryLabel(item.category)}
                             </span>
@@ -430,7 +430,7 @@ export function EmergencyDrawer({
                           : f.status === 'proxied'
                           ? 'text-[#32ADE6]'
                           : f.status === 'empty'
-                          ? 'text-white/45'
+                          ? 'text-white/60'
                           : 'text-[#ff3b30]'
                       }`}
                     >

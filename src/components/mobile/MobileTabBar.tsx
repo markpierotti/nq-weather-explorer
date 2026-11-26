@@ -39,7 +39,7 @@ export function MobileTabBar({ ref }: { ref?: Ref<HTMLElement> }) {
               onClick={() => onChangeTab(id)}
               aria-current={active ? 'page' : undefined}
               className={`relative flex flex-col items-center justify-center gap-0.5 min-h-14 cursor-pointer transition-colors ${
-                active ? 'text-[#32ADE6]' : 'text-white/55 active:text-white'
+                active ? 'text-[#32ADE6]' : 'text-white/65 active:text-white'
               }`}
             >
               <span className="relative">

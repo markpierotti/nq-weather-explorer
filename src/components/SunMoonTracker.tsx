@@ -20,7 +20,7 @@ export function SunMoonTracker({ current }: SunMoonTrackerProps) {
   return (
     <div className="grid grid-cols-2 gap-3 tabular-nums">
       <div className="ios-bento-card p-3.5 flex flex-col justify-between">
-        <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.1em] text-white/50">
+        <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.1em] text-white/60">
           <span className="flex items-center gap-1.5">
             <Sun className="w-3.5 h-3.5 text-[#ff9500]" /> Solar
           </span>
@@ -30,7 +30,7 @@ export function SunMoonTracker({ current }: SunMoonTrackerProps) {
           <div className="flex items-center gap-1.5">
             <Sunrise className="w-4 h-4 text-[#ff9500]" />
             <div>
-              <div className="text-[10px] text-white/45">Rise</div>
+              <div className="text-[10px] text-white/60">Rise</div>
               <div className="font-semibold text-white">{sunrise}</div>
             </div>
           </div>
@@ -38,7 +38,7 @@ export function SunMoonTracker({ current }: SunMoonTrackerProps) {
           <div className="flex items-center gap-1.5">
             <Sunset className="w-4 h-4 text-orange-400" />
             <div>
-              <div className="text-[10px] text-white/45">Set</div>
+              <div className="text-[10px] text-white/60">Set</div>
               <div className="font-semibold text-white">{sunset}</div>
             </div>
           </div>
@@ -46,7 +46,7 @@ export function SunMoonTracker({ current }: SunMoonTrackerProps) {
       </div>
 
       <div className="ios-bento-card p-3.5 flex flex-col justify-between">
-        <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.1em] text-white/50">
+        <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.1em] text-white/60">
           <span className="flex items-center gap-1.5">
             <Moon className="w-3.5 h-3.5 text-indigo-400" /> Lunar
           </span>
@@ -58,7 +58,7 @@ export function SunMoonTracker({ current }: SunMoonTrackerProps) {
           </div>
           <div>
             <div className="text-xs font-semibold text-white">{moonPhase}</div>
-            <div className="text-[10px] text-white/45">Illumination ~78%</div>
+            <div className="text-[10px] text-white/60">Illumination ~78%</div>
           </div>
         </div>
       </div>

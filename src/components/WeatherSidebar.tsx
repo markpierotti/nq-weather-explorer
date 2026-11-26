@@ -66,9 +66,9 @@ function CollapsedDock({ onOpenAddLocation }: { onOpenAddLocation: () => void })
               </span>
             )}
           </div>
-          <div className="text-[10px] text-white/55 truncate max-w-[160px]">{conditionText}</div>
+          <div className="text-[10px] text-white/65 truncate max-w-[160px]">{conditionText}</div>
         </div>
-        <ChevronRight className="w-4 h-4 text-white/50 ml-0.5" />
+        <ChevronRight className="w-4 h-4 text-white/60 ml-0.5" />
       </button>
 
       {!isSearchActive && (
@@ -97,7 +97,7 @@ function CollapsedDock({ onOpenAddLocation }: { onOpenAddLocation: () => void })
             className={`px-2.5 py-1.5 rounded-xl text-xs font-medium flex items-center gap-1 whitespace-nowrap shrink-0 cursor-pointer border transition-colors tabular-nums ${
               emergencyDashboardEnabled
                 ? 'text-[#ff9500] bg-[#ff9500]/15 border-[#ff9500]/35 hover:bg-[#ff9500]/25'
-                : 'text-white/55 bg-white/[0.06] border-white/10 hover:text-white'
+                : 'text-white/65 bg-white/[0.06] border-white/10 hover:text-white'
             }`}
             title={emergencyDashboardEnabled ? 'Turn Emergency Dashboard OFF' : 'Turn Emergency Dashboard ON'}
           >
@@ -175,12 +175,12 @@ function SidebarTabs() {
     {
       id: 'emergency',
       label: emergencyDashboardEnabled ? `Emerg. (${badges.emergency})` : 'Emerg.',
-      icon: <ShieldAlert className={`w-3.5 h-3.5 ${emergencyDashboardEnabled ? 'text-[#ff9500]' : 'text-white/40'}`} />,
+      icon: <ShieldAlert className={`w-3.5 h-3.5 ${emergencyDashboardEnabled ? 'text-[#ff9500]' : 'text-white/60'}`} />,
     },
     {
       id: 'alerts',
       label: badges.alerts > 0 ? `Alerts (${badges.alerts})` : 'Alerts',
-      icon: <Bell className={`w-3.5 h-3.5 ${badges.alerts > 0 ? 'text-[#ff3b30]' : 'text-white/40'}`} />,
+      icon: <Bell className={`w-3.5 h-3.5 ${badges.alerts > 0 ? 'text-[#ff3b30]' : 'text-white/60'}`} />,
     },
   ];
 

@@ -71,7 +71,7 @@ export function LocationSearchRow({ isAddOpen, onToggleAdd, trailing }: Location
 }
 
 const inputClass =
-  'w-full px-2.5 py-2.5 lg:py-1.5 text-base lg:text-xs rounded-lg border border-white/15 bg-white/10 text-white placeholder:text-white/40 focus:outline-none focus:border-[#32ADE6]';
+  'w-full px-2.5 py-2.5 lg:py-1.5 text-base lg:text-xs rounded-lg border border-white/15 bg-white/10 text-white placeholder:text-white/60 focus:outline-none focus:border-[#32ADE6]';
 
 /** Expandable "Add location" form: Places search, save-current, or raw coordinates. */
 export function AddLocationForm({ onClose }: { onClose: () => void }) {
@@ -114,7 +114,7 @@ export function AddLocationForm({ onClose }: { onClose: () => void }) {
         <button
           type="button"
           onClick={onClose}
-          className="w-11 h-11 -m-3 lg:w-auto lg:h-auto lg:m-0 lg:p-0.5 flex items-center justify-center rounded text-white/50 hover:text-white cursor-pointer"
+          className="w-11 h-11 -m-3 lg:w-auto lg:h-auto lg:m-0 lg:p-0.5 flex items-center justify-center rounded text-white/60 hover:text-white cursor-pointer"
           aria-label="Close Add Location form"
         >
           <X className="w-4 h-4 lg:w-3.5 lg:h-3.5" />
@@ -122,7 +122,7 @@ export function AddLocationForm({ onClose }: { onClose: () => void }) {
       </div>
 
       <div>
-        <div className="text-[10px] font-mono uppercase tracking-wider text-white/50 mb-1">Search a town or place</div>
+        <div className="text-[10px] font-mono uppercase tracking-wider text-white/60 mb-1">Search a town or place</div>
         <PlaceAutocompleteNew
           onSelectLocation={addAndClose}
           placeholder="Type place name (e.g. Home Hill, Giru, Bowen)…"
@@ -141,7 +141,7 @@ export function AddLocationForm({ onClose }: { onClose: () => void }) {
       )}
 
       <form onSubmit={handleSubmit} className="pt-2 border-t border-white/10 space-y-2">
-        <div className="text-[10px] font-mono uppercase tracking-wider text-white/50">Or enter custom coordinates</div>
+        <div className="text-[10px] font-mono uppercase tracking-wider text-white/60">Or enter custom coordinates</div>
         <input
           type="text"
           value={customName}
@@ -237,7 +237,7 @@ export function LocationChips() {
               type="button"
               onClick={() => onRemoveSavedLocation(loc.id)}
               className={`min-h-11 min-w-9 lg:min-h-0 lg:min-w-0 flex items-center justify-center pr-2 pl-0.5 py-1 cursor-pointer ${
-                isSelected ? 'text-[#111113]/70 hover:text-[#111113]' : 'text-white/45 hover:text-[#ff3b30]'
+                isSelected ? 'text-[#111113]/70 hover:text-[#111113]' : 'text-white/60 hover:text-[#ff3b30]'
               }`}
               title={`Remove ${loc.name}`}
               aria-label={`Remove ${loc.name}`}

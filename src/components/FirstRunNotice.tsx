@@ -260,13 +260,13 @@ export function FirstRunNotice() {
                     </span>
                   </li>
                 </ul>
-                <p className="text-xs text-white/55">
+                <p className="text-xs text-white/65">
                   The map and place search cost a little too, so close the app when you’re done.
                 </p>
               </div>
 
               <p className="flex items-start gap-2">
-                <CloudLightning aria-hidden="true" className="w-4 h-4 mt-0.5 shrink-0 text-white/50" />
+                <CloudLightning aria-hidden="true" className="w-4 h-4 mt-0.5 shrink-0 text-white/60" />
                 <span>
                   Everyday forecasts, radar, BOM warnings, river gauges and road events are free. Use them as
                   much as you like.
@@ -279,7 +279,7 @@ export function FirstRunNotice() {
                     <Smartphone aria-hidden="true" className="w-4 h-4" />
                     Add to Your Home Screen
                   </div>
-                  <p className="text-xs text-white/55">
+                  <p className="text-xs text-white/65">
                     It opens full screen, like a normal app.
                     {platform !== 'android' && ' On iPhone, storm alerts only work after you add it.'}
                   </p>

@@ -44,8 +44,8 @@ function ConsensusBento() {
     <div className="grid grid-cols-2 gap-3 tabular-nums">
       <div className="col-span-2 ios-bento-card p-4">
         <div className="flex items-center justify-between mb-3">
-          <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-white/50 flex items-center gap-1.5">
-            <BarChart3 className="w-3.5 h-3.5 text-white/50" />
+          <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-white/60 flex items-center gap-1.5">
+            <BarChart3 className="w-3.5 h-3.5 text-white/60" />
             <span>Multi-Model Consensus (Today)</span>
           </div>
           <button type="button" onClick={() => onChangeTab('models')} className={`${linkBtn} text-[#32ADE6] hover:underline`}>
@@ -86,7 +86,7 @@ function ConsensusBento() {
       </div>
 
       <div className="ios-bento-card p-4 flex flex-col justify-between">
-        <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-white/50">Precipitation</div>
+        <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-white/60">Precipitation</div>
         <div className="mt-2">
           <div className="text-[1.8rem] font-semibold leading-none text-white">
             {spread?.peak24hRainConsensusMm !== null && spread?.peak24hRainConsensusMm !== undefined
@@ -96,17 +96,17 @@ function ConsensusBento() {
               : '0.0'}
             <span className="text-sm font-normal text-white/60 ml-1">{isMetric ? 'mm' : 'in'}</span>
           </div>
-          <div className="text-xs text-white/55 mt-2">24h Mean</div>
+          <div className="text-xs text-white/65 mt-2">24h Mean</div>
         </div>
       </div>
 
       <div className="ios-bento-card p-4 flex flex-col justify-between">
-        <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-white/50">Consensus</div>
+        <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-white/60">Consensus</div>
         <div className="mt-2">
           <div className={`text-base font-semibold leading-tight ${spreadColorClass}`}>
             {spread?.agreementLabel || 'Syncing…'}
           </div>
-          <div className="text-xs text-white/55 mt-2">
+          <div className="text-xs text-white/65 mt-2">
             {spread?.avgTempSpreadC !== null && spread?.avgTempSpreadC !== undefined
               ? `ΔT ${spread.avgTempSpreadC.toFixed(1)}° · Model Spread`
               : 'Model Variation'}

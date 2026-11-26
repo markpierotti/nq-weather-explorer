@@ -73,7 +73,7 @@ export function HourlyForecastTimeline({ hourly = [], historyHours = [] }: Hourl
           )}
         </div>
 
-        <span className="text-[10px] text-white/40 font-mono">HOURLY</span>
+        <span className="text-[10px] text-white/60 font-mono">HOURLY</span>
       </div>
 
       <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar select-none tabular-nums">

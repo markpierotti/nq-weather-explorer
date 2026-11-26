@@ -59,7 +59,7 @@ const WINDOW_RADIUS = 4; // Lucas–Kanade window: (2r + 1)² pixels at every py
 const SMOOTH_SIGMA = 2.5; // field smoothing per level, pixels
 const GRID_CELL_PX = 8;
 /** Faster than this (km/h) is treated as an estimation failure rather than real rain motion. */
-export const MAX_SPEED_KMH = 160;
+const MAX_SPEED_KMH = 160;
 const RAIN_THRESHOLD = 0.08;
 const EARTH_CIRCUMFERENCE_KM = 40075.016686;
 
@@ -221,8 +221,9 @@ function refineLevel(
           const xm = x > 0 ? x - 1 : x;
           const xp = x < w - 1 ? x + 1 : x;
           const i = y * w + x;
-          const gx = 0.25 * (warped[y * w + xp] - warped[y * w + xm] + last[y * w + xp] - last[y * w + xm]) * (2 / (xp - xm || 1));
-          const gy = 0.25 * (warped[yp * w + x] - warped[ym * w + x] + last[yp * w + x] - last[ym * w + x]) * (2 / (yp - ym || 1));
+          // Central differences of the mean of the two images (one-sided at the edges).
+          const gx = (0.5 * (warped[y * w + xp] - warped[y * w + xm] + last[y * w + xp] - last[y * w + xm])) / (xp - xm || 1);
+          const gy = (0.5 * (warped[yp * w + x] - warped[ym * w + x] + last[yp * w + x] - last[ym * w + x])) / (yp - ym || 1);
           const diff = warped[i] - last[i]; // = −I_t
           const gxd = gx * dt;
           const gyd = gy * dt;

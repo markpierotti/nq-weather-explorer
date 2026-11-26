@@ -336,14 +336,16 @@ export function WeatherTileOverlay({
       add(makeNowcastLayer(spec, nodes, getOpacity, nowcast.opacity));
     }
 
-    if (rainViewerFrame.kind === 'model') {
-      const blend = rainViewerFrame.grid;
-      const from = blend ? forecastGrid?.precip[blend.from] : undefined;
-      const to = blend ? forecastGrid?.precip[blend.to] : undefined;
-      if (!forecastGrid || !blend || !from || !to) return removeLayers;
-      const values = blend.mix === 0 ? from : from.map((v, i) => v + ((to[i] ?? 0) - v) * blend.mix);
-      const mul = rainViewerFrame.modelOpacity ?? handover?.model ?? 1;
-      add(makeModelLayer(forecastGrid, values, nodes, getOpacity, mul));
+    // Model rain: 'model' frames, and late nowcast frames that are blending into the model.
+    const blend = rainViewerFrame.grid;
+    if (blend) {
+      const from = forecastGrid?.precip[blend.from];
+      const to = forecastGrid?.precip[blend.to];
+      if (forecastGrid && from && to) {
+        const values = blend.mix === 0 ? from : from.map((v, i) => v + ((to[i] ?? 0) - v) * blend.mix);
+        const mul = rainViewerFrame.modelOpacity ?? handover?.model ?? 1;
+        add(makeModelLayer(forecastGrid, values, nodes, getOpacity, mul));
+      }
     } else if (host && rainViewerFrame.path) {
       add(makeRadarLayer(host, rainViewerFrame.path, nodes, getOpacity, 1));
     }

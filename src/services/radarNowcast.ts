@@ -148,7 +148,7 @@ export async function estimateRadarMotion(host: string, frames: RainViewerFrame[
     );
     return result.field;
   } catch (err) {
-    console.warn('Radar motion estimate failed:', err);
+    console.warn('Radar nowcast skipped:', err instanceof Error ? err.message : err);
     return null;
   } finally {
     window.clearTimeout(timer);
@@ -182,33 +182,52 @@ function getDisplacement(field: MotionField, seconds: number): DisplacementGrid 
   return grid;
 }
 
-/** Decoded radar map tiles (RGBA), shared across nowcast frames: every frame warps the same latest radar frame. */
-const sourceCache = new Map<string, Promise<Uint8ClampedArray | null>>();
+/** A decoded radar map tile, plus which 16 px blocks hold any rain (most don't, and are skipped). */
+interface SourceTile {
+  data: Uint8ClampedArray;
+  occupied: Uint8Array;
+}
+const OCC_PX = 16;
+const OCC_N = 256 / OCC_PX;
+
+/** Decoded radar map tiles, shared across nowcast frames: every frame warps the same latest radar frame. */
+const sourceCache = new Map<string, Promise<SourceTile | null>>();
 
 /** Same URL as the radar layer's tiles, so these come straight from the browser cache. */
 export function radarTileUrl(host: string, path: string, z: number, x: number, y: number): string {
   return `${host}${path}/256/${z}/${x}/${y}/1/1_1.png`;
 }
 
-function loadSource(url: string): Promise<Uint8ClampedArray | null> {
+function decodeSource(img: HTMLImageElement): SourceTile | null {
+  const c = document.createElement('canvas');
+  c.width = 256;
+  c.height = 256;
+  const ctx = c.getContext('2d', { willReadFrequently: true });
+  if (!ctx) return null;
+  ctx.drawImage(img, 0, 0, 256, 256);
+  const data = ctx.getImageData(0, 0, 256, 256).data;
+  const occupied = new Uint8Array(OCC_N * OCC_N);
+  for (let y = 0; y < 256; y++) {
+    for (let x = 0; x < 256; x++) {
+      if (data[(y * 256 + x) * 4 + 3]) occupied[((y / OCC_PX) | 0) * OCC_N + ((x / OCC_PX) | 0)] = 1;
+    }
+  }
+  return { data, occupied };
+}
+
+function loadSource(url: string): Promise<SourceTile | null> {
   const hit = sourceCache.get(url);
   if (hit) {
     sourceCache.delete(url); // refresh LRU order
     sourceCache.set(url, hit);
     return hit;
   }
-  const p = new Promise<Uint8ClampedArray | null>((resolve) => {
+  const p = new Promise<SourceTile | null>((resolve) => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => {
       try {
-        const c = document.createElement('canvas');
-        c.width = 256;
-        c.height = 256;
-        const ctx = c.getContext('2d', { willReadFrequently: true });
-        if (!ctx) return resolve(null);
-        ctx.drawImage(img, 0, 0, 256, 256);
-        resolve(ctx.getImageData(0, 0, 256, 256).data);
+        resolve(decodeSource(img));
       } catch {
         resolve(null);
       }
@@ -232,10 +251,13 @@ export interface NowcastTileSpec {
   seconds: number;
 }
 
+/** Output pixels between back-trajectory samples; displacement is bilinear in between (the field is smooth). */
+const LATTICE_PX = 16;
+
 /**
  * Draw one map tile of the nowcast: each output pixel takes the latest radar colour from where its
  * back-trajectory started (bilinear, premultiplied). Returns the canvas at once and paints it when the source
- * tiles are ready (synchronously if they're cached). Null when nothing can show on this tile.
+ * tiles are ready (in the same task if they're cached). Null when nothing can show on this tile.
  */
 export function drawNowcastTile(
   ownerDocument: Document,
@@ -257,21 +279,24 @@ export function drawNowcastTile(
 
   const nz = Math.min(zoom, RAINVIEWER_MAX_NATIVE_ZOOM);
   const nativeWorld = 256 * (1 << nz); // native pixels across the world
+  // Output at the radar's native resolution (never below 32 px, so deep zooms still interpolate smoothly).
   const out = Math.max(32, Math.min(256, 256 >> (zoom - nz)));
   const disp = getDisplacement(field, seconds);
 
-  // Per output pixel: source position in native pixels and an alpha multiplier.
-  const srcX = new Float32Array(out * out);
-  const srcY = new Float32Array(out * out);
-  const mul = new Float32Array(out * out);
+  // Lattice of source positions (native pixels) and alpha multipliers at block corners.
+  const blocks = out / LATTICE_PX;
+  const ln = blocks + 1;
+  const lx = new Float32Array(ln * ln);
+  const ly = new Float32Array(ln * ln);
+  const lm = new Float32Array(ln * ln);
   let minX = Infinity;
   let minY = Infinity;
   let maxX = -Infinity;
   let maxY = -Infinity;
-  for (let j = 0; j < out; j++) {
-    const wy = ty0 + ((j + 0.5) / out) * tw;
-    for (let i = 0; i < out; i++) {
-      const wx = tx0 + ((i + 0.5) / out) * tw;
+  for (let j = 0; j < ln; j++) {
+    const wy = ty0 + ((j * LATTICE_PX) / out) * tw;
+    for (let i = 0; i < ln; i++) {
+      const wx = tx0 + ((i * LATTICE_PX) / out) * tw;
       const dw = domainWeight(field, wx, wy, DOMAIN_MARGIN);
       let sx = wx;
       let sy = wy;
@@ -280,14 +305,14 @@ export function drawNowcastTile(
         sx -= dx * dw;
         sy -= dy * dw;
       }
-      const k = j * out + i;
-      srcX[k] = sx * nativeWorld - 0.5;
-      srcY[k] = sy * nativeWorld - 0.5;
-      mul[k] = dw + (1 - dw) * persist;
-      if (srcX[k] < minX) minX = srcX[k];
-      if (srcX[k] > maxX) maxX = srcX[k];
-      if (srcY[k] < minY) minY = srcY[k];
-      if (srcY[k] > maxY) maxY = srcY[k];
+      const k = j * ln + i;
+      lx[k] = sx * nativeWorld - 0.5;
+      ly[k] = sy * nativeWorld - 0.5;
+      lm[k] = dw + (1 - dw) * persist;
+      minX = Math.min(minX, lx[k]);
+      maxX = Math.max(maxX, lx[k]);
+      minY = Math.min(minY, ly[k]);
+      maxY = Math.max(maxY, ly[k]);
     }
   }
 
@@ -312,50 +337,134 @@ export function drawNowcastTile(
     }
   }
 
-  const paint = (tiles: Array<Uint8ClampedArray | null>) => {
+  const paint = (tiles: Array<SourceTile | null>) => {
+    if (tiles.every((t) => !t)) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    const img = ctx.createImageData(out, out);
-    const dst = img.data;
-    // Premultiplied bilinear tap accumulation.
-    for (let k = 0; k < out * out; k++) {
-      if (mul[k] <= 0) continue;
-      const fx = srcX[k];
-      const fy = srcY[k];
-      const x0 = Math.floor(fx);
-      const y0 = Math.floor(fy);
-      const ax = fx - x0;
-      const ay = fy - y0;
-      let r = 0;
-      let g = 0;
-      let bl = 0;
-      let a = 0;
-      for (let t = 0; t < 4; t++) {
-        const px = x0 + (t & 1);
-        const py = y0 + (t >> 1);
-        const wgt = (t & 1 ? ax : 1 - ax) * (t >> 1 ? ay : 1 - ay);
-        if (wgt <= 0) continue;
-        const c = Math.floor(px / 256) - stx0;
-        const rr = Math.floor(py / 256) - sty0;
-        if (c < 0 || c >= cols || rr < 0 || rr >= rows) continue;
-        const tile = tiles[rr * cols + c];
-        if (!tile) continue;
-        const o = (((py & 255) << 8) | (px & 255)) * 4;
-        const ta = tile[o + 3] * wgt;
-        if (ta === 0) continue;
-        r += tile[o] * ta;
-        g += tile[o + 1] * ta;
-        bl += tile[o + 2] * ta;
-        a += ta;
+    let img: ImageData | null = null;
+
+    /** Any rain in the source box [x0, x1] × [y0, y1] (native pixels)? */
+    const anyRain = (x0: number, y0: number, x1: number, y1: number) => {
+      const cx0 = Math.floor(x0 / OCC_PX);
+      const cx1 = Math.floor(x1 / OCC_PX);
+      const cy0 = Math.floor(y0 / OCC_PX);
+      const cy1 = Math.floor(y1 / OCC_PX);
+      for (let cy = cy0; cy <= cy1; cy++) {
+        const rr = Math.floor(cy / OCC_N) - sty0;
+        if (rr < 0 || rr >= rows) continue;
+        for (let cx = cx0; cx <= cx1; cx++) {
+          const c = Math.floor(cx / OCC_N) - stx0;
+          if (c < 0 || c >= cols) continue;
+          const t = tiles[rr * cols + c];
+          if (t && t.occupied[(cy & (OCC_N - 1)) * OCC_N + (cx & (OCC_N - 1))]) return true;
+        }
       }
-      if (a < 0.5) continue;
-      const o = k * 4;
-      dst[o] = r / a;
-      dst[o + 1] = g / a;
-      dst[o + 2] = bl / a;
-      dst[o + 3] = a * mul[k];
+      return false;
+    };
+
+    for (let by = 0; by < blocks; by++) {
+      for (let bx = 0; bx < blocks; bx++) {
+        const k00 = by * ln + bx;
+        const k10 = k00 + 1;
+        const k01 = k00 + ln;
+        const k11 = k01 + 1;
+        const m00 = lm[k00];
+        const m10 = lm[k10];
+        const m01 = lm[k01];
+        const m11 = lm[k11];
+        if (m00 <= 0 && m10 <= 0 && m01 <= 0 && m11 <= 0) continue;
+        const x00 = lx[k00];
+        const x10 = lx[k10];
+        const x01 = lx[k01];
+        const x11 = lx[k11];
+        const y00 = ly[k00];
+        const y10 = ly[k10];
+        const y01 = ly[k01];
+        const y11 = ly[k11];
+        // Bilinear between corners: the block's source area is bounded by its corners.
+        if (
+          !anyRain(
+            Math.min(x00, x10, x01, x11) - 1,
+            Math.min(y00, y10, y01, y11) - 1,
+            Math.max(x00, x10, x01, x11) + 1,
+            Math.max(y00, y10, y01, y11) + 1,
+          )
+        ) {
+          continue;
+        }
+        if (!img) img = ctx.createImageData(out, out);
+        const dst = img.data;
+        for (let pj = 0; pj < LATTICE_PX; pj++) {
+          const v = (pj + 0.5) / LATTICE_PX;
+          const xa = x00 + (x01 - x00) * v;
+          const xb = x10 + (x11 - x10) * v;
+          const ya = y00 + (y01 - y00) * v;
+          const yb = y10 + (y11 - y10) * v;
+          const ma = m00 + (m01 - m00) * v;
+          const mb = m10 + (m11 - m10) * v;
+          const rowOut = (by * LATTICE_PX + pj) * out + bx * LATTICE_PX;
+          for (let pi = 0; pi < LATTICE_PX; pi++) {
+            const u = (pi + 0.5) / LATTICE_PX;
+            const mul = ma + (mb - ma) * u;
+            if (mul <= 0) continue;
+            const fx = xa + (xb - xa) * u;
+            const fy = ya + (yb - ya) * u;
+            const ix = Math.floor(fx);
+            const iy = Math.floor(fy);
+            const ax = fx - ix;
+            const ay = fy - iy;
+            let r = 0;
+            let g = 0;
+            let bl = 0;
+            let a = 0;
+            const c0 = Math.floor(ix / 256) - stx0;
+            const r0 = Math.floor(iy / 256) - sty0;
+            if ((ix & 255) < 255 && (iy & 255) < 255) {
+              // Fast path: all four taps in one source tile.
+              const t = c0 >= 0 && c0 < cols && r0 >= 0 && r0 < rows ? tiles[r0 * cols + c0] : null;
+              if (!t) continue;
+              const d = t.data;
+              const o00 = (((iy & 255) << 8) | (ix & 255)) * 4;
+              const o10 = o00 + 4;
+              const o01 = o00 + 1024;
+              const o11 = o01 + 4;
+              const w00 = (1 - ax) * (1 - ay) * d[o00 + 3];
+              const w10 = ax * (1 - ay) * d[o10 + 3];
+              const w01 = (1 - ax) * ay * d[o01 + 3];
+              const w11 = ax * ay * d[o11 + 3];
+              a = w00 + w10 + w01 + w11;
+              if (a < 0.5) continue;
+              r = d[o00] * w00 + d[o10] * w10 + d[o01] * w01 + d[o11] * w11;
+              g = d[o00 + 1] * w00 + d[o10 + 1] * w10 + d[o01 + 1] * w01 + d[o11 + 1] * w11;
+              bl = d[o00 + 2] * w00 + d[o10 + 2] * w10 + d[o01 + 2] * w01 + d[o11 + 2] * w11;
+            } else {
+              for (let t = 0; t < 4; t++) {
+                const px = ix + (t & 1);
+                const py = iy + (t >> 1);
+                const c = Math.floor(px / 256) - stx0;
+                const rr = Math.floor(py / 256) - sty0;
+                if (c < 0 || c >= cols || rr < 0 || rr >= rows) continue;
+                const tile = tiles[rr * cols + c];
+                if (!tile) continue;
+                const o = (((py & 255) << 8) | (px & 255)) * 4;
+                const wa = (t & 1 ? ax : 1 - ax) * (t >> 1 ? ay : 1 - ay) * tile.data[o + 3];
+                r += tile.data[o] * wa;
+                g += tile.data[o + 1] * wa;
+                bl += tile.data[o + 2] * wa;
+                a += wa;
+              }
+              if (a < 0.5) continue;
+            }
+            const o = (rowOut + pi) * 4;
+            dst[o] = r / a;
+            dst[o + 1] = g / a;
+            dst[o + 2] = bl / a;
+            dst[o + 3] = a * mul;
+          }
+        }
+      }
     }
-    ctx.putImageData(img, 0, 0);
+    if (img) ctx.putImageData(img, 0, 0);
   };
 
   Promise.all(urls.map(loadSource)).then(paint);

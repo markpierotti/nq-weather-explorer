@@ -20,7 +20,12 @@ interface WeatherTileOverlayProps {
 const RAINVIEWER_MAX_NATIVE_ZOOM = 7;
 
 /** Model tiles are drawn at low resolution and upscaled smoothly: the grid is ~80 km, so more is wasted work. */
-const MODEL_TILE_PX = 64;
+const MODEL_TILE_PX = 128;
+
+/** Full overlay alpha for model rain; the lightest band fades in so ~0.1 mm drizzle doesn't wash over the map. */
+const MODEL_ALPHA = 190;
+const MODEL_FADE_FROM_MM = 0.1;
+const MODEL_FADE_TO_MM = 0.6;
 
 /** Hourly rain (mm) → colour, matching the radar legend bands in RadarControlBar. */
 const MODEL_RAIN_RAMP: Array<{ minMm: number; rgb: [number, number, number] }> = [
@@ -37,20 +42,31 @@ function rainColour(mm: number): [number, number, number] | null {
   return null;
 }
 
-/** Bilinearly sample one forecast hour (mm) at a lat/lon; null outside the grid. */
-function sampleGrid(grid: ForecastGridResponse, values: number[], lat: number, lon: number): number | null {
-  const { north, south, west, east } = grid.bbox;
-  if (lat > north || lat < south || lon < west || lon > east) return null;
-  const fr = ((north - lat) / (north - south)) * (grid.rows - 1);
-  const fc = ((lon - west) / (east - west)) * (grid.cols - 1);
-  const r0 = Math.min(grid.rows - 2, Math.floor(fr));
-  const c0 = Math.min(grid.cols - 2, Math.floor(fc));
-  const tr = fr - r0;
-  const tc = fc - c0;
-  const at = (r: number, c: number) => (values[r * grid.cols + c] ?? 0) / 10;
-  const top = at(r0, c0) * (1 - tc) + at(r0, c0 + 1) * tc;
-  const bottom = at(r0 + 1, c0) * (1 - tc) + at(r0 + 1, c0 + 1) * tc;
-  return top * (1 - tr) + bottom * tr;
+/**
+ * Grid nodes are splatted with a Gaussian (σ in grid cells) rather than bilinearly interpolated: at ~80 km spacing,
+ * bilinear contours follow the grid lines and draw square blobs. σ = 0.5 keeps a uniform field unchanged
+ * (the summed weights ripple by ~1%) and fades rain out within a cell or so past the grid edge.
+ */
+const SPLAT_SIGMA_CELLS = 0.5;
+const SPLAT_NORM = 1 / (2 * Math.PI * SPLAT_SIGMA_CELLS * SPLAT_SIGMA_CELLS);
+/** How far past the outermost nodes to keep drawing (cells); by 1.5 cells (3σ) a splat is ~1% of its peak. */
+const SPLAT_MARGIN_CELLS = 1.5;
+
+/** For each pixel along one axis: the 4 nearest grid indices (-1 when off the grid) and their 1-D weights. */
+function axisTaps(coords: Float64Array, count: number) {
+  const idx = new Int32Array(coords.length * 4);
+  const w = new Float64Array(coords.length * 4);
+  for (let i = 0; i < coords.length; i++) {
+    const f = coords[i];
+    const base = Math.floor(f) - 1;
+    for (let k = 0; k < 4; k++) {
+      const g = base + k;
+      const d = f - g;
+      idx[i * 4 + k] = g >= 0 && g < count ? g : -1;
+      w[i * 4 + k] = Math.exp(-(d * d) / (2 * SPLAT_SIGMA_CELLS * SPLAT_SIGMA_CELLS));
+    }
+  }
+  return { idx, w };
 }
 
 /** Paint one Web Mercator tile of the model rain grid into a small canvas. */
@@ -63,14 +79,29 @@ function drawModelTile(
   zoom: number,
 ): HTMLCanvasElement | null {
   const n = 1 << zoom;
-  // Skip tiles that don't intersect the grid bbox.
+  const { north, south, west, east } = grid.bbox;
+  const cellLat = (north - south) / (grid.rows - 1);
+  const cellLon = (east - west) / (grid.cols - 1);
+  const latAt = (wy: number) => (Math.atan(Math.sinh(Math.PI * (1 - 2 * wy))) * 180) / Math.PI;
+
+  // Skip tiles that don't come near the grid.
   const lonW = (x / n) * 360 - 180;
   const lonE = ((x + 1) / n) * 360 - 180;
-  const latAt = (wy: number) => (Math.atan(Math.sinh(Math.PI * (1 - 2 * wy))) * 180) / Math.PI;
   const latN = latAt(y / n);
   const latS = latAt((y + 1) / n);
-  const { north, south, west, east } = grid.bbox;
-  if (lonE < west || lonW > east || latS > north || latN < south) return null;
+  const mLat = SPLAT_MARGIN_CELLS * cellLat;
+  const mLon = SPLAT_MARGIN_CELLS * cellLon;
+  if (lonE < west - mLon || lonW > east + mLon || latS > north + mLat || latN < south - mLat) return null;
+
+  // Fractional grid row/column for each pixel row/column (rows run north to south).
+  const rowCoords = new Float64Array(MODEL_TILE_PX);
+  const colCoords = new Float64Array(MODEL_TILE_PX);
+  for (let p = 0; p < MODEL_TILE_PX; p++) {
+    rowCoords[p] = (north - latAt((y + (p + 0.5) / MODEL_TILE_PX) / n)) / cellLat;
+    colCoords[p] = (((x + (p + 0.5) / MODEL_TILE_PX) / n) * 360 - 180 - west) / cellLon;
+  }
+  const rows = axisTaps(rowCoords, grid.rows);
+  const cols = axisTaps(colCoords, grid.cols);
 
   const canvas = ownerDocument.createElement('canvas');
   canvas.width = MODEL_TILE_PX;
@@ -80,17 +111,31 @@ function drawModelTile(
   const img = ctx.createImageData(MODEL_TILE_PX, MODEL_TILE_PX);
   let painted = false;
   for (let py = 0; py < MODEL_TILE_PX; py++) {
-    const lat = latAt((y + (py + 0.5) / MODEL_TILE_PX) / n);
     for (let px = 0; px < MODEL_TILE_PX; px++) {
-      const lon = ((x + (px + 0.5) / MODEL_TILE_PX) / n) * 360 - 180;
-      const mm = sampleGrid(grid, values, lat, lon);
-      const rgb = mm == null ? null : rainColour(mm);
+      let sum = 0;
+      for (let a = 0; a < 4; a++) {
+        const r = rows.idx[py * 4 + a];
+        if (r < 0) continue;
+        const wr = rows.w[py * 4 + a];
+        const rowBase = r * grid.cols;
+        for (let b = 0; b < 4; b++) {
+          const c = cols.idx[px * 4 + b];
+          if (c < 0) continue;
+          const v = values[rowBase + c];
+          if (v) sum += v * wr * cols.w[px * 4 + b];
+        }
+      }
+      if (sum === 0) continue;
+      const mm = (sum * SPLAT_NORM) / 10; // values are tenths of a mm
+      const rgb = rainColour(mm);
       if (!rgb) continue;
+      const fade = Math.min(1, (mm - MODEL_FADE_FROM_MM) / (MODEL_FADE_TO_MM - MODEL_FADE_FROM_MM));
+      if (fade <= 0) continue;
       const o = (py * MODEL_TILE_PX + px) * 4;
       img.data[o] = rgb[0];
       img.data[o + 1] = rgb[1];
       img.data[o + 2] = rgb[2];
-      img.data[o + 3] = 190;
+      img.data[o + 3] = Math.round(MODEL_ALPHA * fade);
       painted = true;
     }
   }

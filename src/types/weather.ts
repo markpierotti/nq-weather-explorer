@@ -411,14 +411,42 @@ export interface MultiModelBundle {
 
 export interface RainViewerFrame {
   time: number;
+  /** RainViewer tile path; empty for 'model' frames. */
   path: string;
-  kind: 'past' | 'nowcast';
+  /** 'past' = observed radar, 'nowcast' = RainViewer extrapolation, 'model' = Open-Meteo hourly forecast. */
+  kind: 'past' | 'nowcast' | 'model';
+  /**
+   * 'model' frames: the frame's rain rate, interpolated in time between two hourly grid steps
+   * (precip[from] * (1 - mix) + precip[to] * mix).
+   */
+  grid?: { from: number; to: number; mix: number };
+  /**
+   * First few 'model' frames: crossfade from the last radar frame (drawn beneath at opacity × radar)
+   * into the model (opacity × model), so the timeline doesn't hard-cut from radar to forecast.
+   */
+  handover?: { radarPath: string; radar: number; model: number };
 }
 
 export interface RainViewerData {
   host: string;
   generated: number;
   frames: RainViewerFrame[];
+  /** Open-Meteo model rain grid backing the 'model' frames, when available. */
+  forecastGrid?: ForecastGridResponse | null;
+}
+
+/** /api/weather/forecast-grid: hourly model precipitation on a regular lat/lon grid over NQ. */
+export interface ForecastGridResponse {
+  bbox: { north: number; south: number; west: number; east: number };
+  rows: number;
+  cols: number;
+  /** Unix seconds; each value is the end of the hour that precip[t] accumulates over. */
+  times: number[];
+  /** precip[t][row * cols + col], tenths of a millimetre; rows run north to south. */
+  precip: number[][];
+  fetchedAt: number;
+  fromCache?: boolean;
+  error?: string;
 }
 
 // ---------------------------------------------------------------------------

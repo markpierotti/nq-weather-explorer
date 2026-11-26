@@ -12,6 +12,7 @@ import { createServer as createViteServer } from 'vite';
 import { registerFeedRoutes } from './server/feeds/index';
 import { registerPushRoutes, startPushPoller } from './server/push/index';
 import { registerBriefingRoutes } from './server/briefing';
+import { registerForecastGridRoute } from './server/forecastGrid';
 import { rateLimit } from './server/rateLimit';
 
 function parseCoordPair(latRaw: unknown, lngRaw: unknown): { lat: number; lng: number } | null {
@@ -654,6 +655,7 @@ app.get('/api/emergency/proxy', async (req, res) => {
 registerFeedRoutes(app);
 registerPushRoutes(app);
 registerBriefingRoutes(app);
+registerForecastGridRoute(app);
 
 // Vite & Static Asset Handling
 async function startServer() {

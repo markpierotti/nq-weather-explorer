@@ -449,6 +449,61 @@ export interface RainViewerData {
   motion?: MotionField | null;
 }
 
+// ---------------------------------------------------------------------------
+// Forecast track record (/api/tracker/summary, see server/tracker)
+// ---------------------------------------------------------------------------
+
+export type TrackerSourceId = 'wn2' | 'ecmwf' | 'gfs' | 'bom' | 'ecmwf_det' | 'gfs_det';
+
+export interface TrackerTempScore {
+  n: number;
+  /** Mean forecast − observed (°C): + runs hot, − runs cold. */
+  bias: number;
+  mae: number;
+  /** MAE once the average bias is subtracted: what a local correction achieves. */
+  maeCorrected: number;
+}
+
+export interface TrackerRainScore {
+  n: number;
+  wetObserved: number;
+  hits: number;
+  misses: number;
+  falseAlarms: number;
+  /** Share of days called correctly (wet or dry, 1 mm threshold), %. */
+  correctPct: number;
+}
+
+export interface TrackerLeadScore {
+  /** Days ahead the forecast was made (1–7). */
+  lead: number;
+  tmax: TrackerTempScore | null;
+  tmin: TrackerTempScore | null;
+  rain: TrackerRainScore | null;
+}
+
+export interface TrackerSiteSummary {
+  id: string;
+  label: string;
+  station: { id: string; name: string } | null;
+  /** BOM town forecast used for this site's "BOM" source, if any. */
+  bomTown: string | null;
+  obsDays: number;
+  firstObs: string | null;
+  lastObs: string | null;
+  /** First day the app itself logged forecasts (WeatherNext 2 / ensemble means / BOM). */
+  loggingSince: string | null;
+  sources: Array<{ id: TrackerSourceId; label: string; leads: TrackerLeadScore[] }>;
+}
+
+export interface TrackerSummaryResponse {
+  generatedAt: string;
+  windowDays: number;
+  /** False when SILO_EMAIL isn't configured: forecasts are logged but nothing can be scored. */
+  observationsEnabled: boolean;
+  sites: TrackerSiteSummary[];
+}
+
 /** /api/weather/forecast-grid: hourly model precipitation on a regular lat/lon grid over NQ. */
 export interface ForecastGridResponse {
   bbox: { north: number; south: number; west: number; east: number };

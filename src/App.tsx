@@ -607,7 +607,7 @@ export function App() {
           <div className="relative flex-1 flex items-start lg:items-center justify-center bg-[#1a1a1c] pt-[calc(env(safe-area-inset-top)+24px)] lg:pt-0">
             <div className="rounded-[20px] bg-white/[0.08] border border-white/10 backdrop-blur-xl shadow-2xl px-6 py-5 text-center max-w-sm mx-4">
               <div className="text-sm font-semibold text-white">
-                {!isConfigReady ? 'Initializing Google Maps...' : 'Google Maps API Key Unavailable'}
+                {!isConfigReady ? 'Initializing Google Maps…' : 'Google Maps API Key Unavailable'}
               </div>
               <p className="text-xs text-white/65 mt-1.5 leading-relaxed">
                 {!isConfigReady

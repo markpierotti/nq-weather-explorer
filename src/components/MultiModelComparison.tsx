@@ -205,9 +205,10 @@ export function MultiModelComparison({
             onClick={onRefresh}
             disabled={isLoading}
             className="p-2 rounded-xl bg-white/10 hover:bg-white/15 border border-white/10 text-white/80 cursor-pointer shrink-0 transition-colors"
+            aria-label="Refresh ensemble"
             title="Refresh ensemble"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+            <RefreshCw aria-hidden="true" className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
           </button>
         </div>
 

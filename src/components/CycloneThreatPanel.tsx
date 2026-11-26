@@ -156,7 +156,7 @@ export function CycloneThreatPanel({
               type="password"
               value={draftKey}
               onChange={(e) => setDraftKey(e.target.value)}
-              placeholder="Optional override..."
+              placeholder="Optional override…"
               className="flex-1 min-w-0 px-2.5 py-1.5 rounded-lg border border-white/15 bg-white/10 text-xs text-white placeholder:text-white/40 focus:outline-none focus:border-[#32ADE6] font-mono"
             />
             <button

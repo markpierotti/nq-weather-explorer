@@ -203,9 +203,10 @@ export function EmergencyDrawer({
               onClick={onRefresh}
               disabled={isLoading}
               className="w-11 h-11 lg:w-auto lg:h-auto lg:p-1.5 flex items-center justify-center rounded-lg bg-white/10 border border-white/10 text-white/80 hover:bg-white/15 transition-colors cursor-pointer"
+              aria-label="Refresh emergency feeds"
               title="Refresh Emergency Feeds"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-[#32ADE6]' : ''}`} />
+              <RefreshCw aria-hidden="true" className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-[#32ADE6]' : ''}`} />
             </button>
           )}
         </div>
@@ -281,7 +282,7 @@ export function EmergencyDrawer({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Filter Bruce Hwy, Ayr, Giru, Home Hill, Townsville..."
+              placeholder="Filter Bruce Hwy, Ayr, Giru, Home Hill, Townsville…"
               className="w-full pl-8 pr-3 py-2.5 lg:py-2 rounded-xl bg-white/10 border border-white/10 text-base lg:text-xs text-white placeholder:text-white/45 focus:outline-none focus:border-[#32ADE6]"
             />
           </div>

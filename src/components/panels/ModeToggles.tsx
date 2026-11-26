@@ -27,6 +27,7 @@ export function IosSwitch({ id, checked, onToggle, activeClass, title }: SwitchP
       className={`relative inline-flex h-6 w-11 lg:h-5 lg:w-9 shrink-0 items-center rounded-full transition-colors cursor-pointer ${
         checked ? activeClass : 'bg-white/20 hover:bg-white/30'
       }`}
+      aria-label={title}
       title={title}
     >
       <span

@@ -132,7 +132,7 @@ function EmergencySummaryCard() {
         </button>
       </div>
       {isLoadingEmergency && !emergencyBundle ? (
-        <div className="text-xs text-white/65">Checking QLD ArcGIS & Guardian IMS feeds...</div>
+        <div className="text-xs text-white/65">Checking QLD ArcGIS & Guardian IMS feeds…</div>
       ) : top ? (
         <div>
           <div className="text-xs font-semibold text-white line-clamp-1">{top.title}</div>

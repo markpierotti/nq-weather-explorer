@@ -31,7 +31,7 @@ let lastConsumedFocusToken = 0;
  */
 export function PlaceAutocompleteNew({
   onSelectLocation,
-  placeholder = 'Search location...',
+  placeholder = 'Search location…',
   className = '',
   onFocusChange,
   focusToken = 0,

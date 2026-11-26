@@ -52,7 +52,7 @@ export function AtmosphericMetricsGrid({ current, unitSystem }: AtmosphericMetri
           </div>
           <div className="w-full bg-white/15 rounded-full h-1.5 mt-2 overflow-hidden">
             <div
-              className="bg-[#32ADE6] h-full rounded-full transition-all duration-500"
+              className="bg-[#32ADE6] h-full rounded-full transition-[width] duration-500"
               style={{ width: `${Math.min(100, Math.max(5, precipProb))}%` }}
             />
           </div>
@@ -116,7 +116,7 @@ export function AtmosphericMetricsGrid({ current, unitSystem }: AtmosphericMetri
         <div className="mt-3">
           <div className="w-full bg-white/15 rounded-full h-1.5 overflow-hidden">
             <div
-              className="bg-[#5856d6] h-full rounded-full transition-all duration-500"
+              className="bg-[#5856d6] h-full rounded-full transition-[width] duration-500"
               style={{ width: `${Math.max(5, cloudCover)}%` }}
             />
           </div>

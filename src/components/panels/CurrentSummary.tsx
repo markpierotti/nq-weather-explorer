@@ -42,9 +42,10 @@ export function CurrentHero() {
           onClick={onRefreshAll}
           disabled={isAnyLoading}
           className="p-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-white/65 hover:text-white transition-colors cursor-pointer shrink-0"
+          aria-label="Refresh all weather and radar feeds"
           title="Refresh all weather & radar feeds"
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${isAnyLoading ? 'animate-spin text-[#32ADE6]' : ''}`} />
+          <RefreshCw aria-hidden="true" className={`w-3.5 h-3.5 ${isAnyLoading ? 'animate-spin text-[#32ADE6]' : ''}`} />
         </button>
       </div>
 
@@ -124,7 +125,7 @@ export function CurrentPeek() {
         title="Refresh all weather & radar feeds"
         aria-label="Refresh all weather and radar feeds"
       >
-        <RefreshCw className={`w-4.5 h-4.5 ${isAnyLoading ? 'animate-spin text-[#32ADE6]' : ''}`} />
+        <RefreshCw aria-hidden="true" className={`w-4.5 h-4.5 ${isAnyLoading ? 'animate-spin text-[#32ADE6]' : ''}`} />
       </button>
     </div>
   );

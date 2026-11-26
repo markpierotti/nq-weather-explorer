@@ -146,7 +146,7 @@ function CollapsedDock({ onOpenAddLocation }: { onOpenAddLocation: () => void })
         </button>
       )}
 
-      <div className={`transition-all duration-200 shadow-2xl rounded-xl min-w-0 ${isSearchActive ? 'w-80' : 'w-64'}`}>
+      <div className={`transition-[width] duration-200 shadow-2xl rounded-xl min-w-0 ${isSearchActive ? 'w-80' : 'w-64'}`}>
         <PlaceAutocompleteNew
           onSelectLocation={(loc) => {
             onSelectLocation(loc);
@@ -154,7 +154,7 @@ function CollapsedDock({ onOpenAddLocation }: { onOpenAddLocation: () => void })
           }}
           onFocusChange={setIsSearchActive}
           alignDropdown="right"
-          placeholder="Search for a city or place..."
+          placeholder="Search for a city or place…"
         />
       </div>
     </div>
@@ -235,9 +235,10 @@ export function WeatherSidebar() {
                 type="button"
                 onClick={onToggleSidebar}
                 className="h-9 w-9 rounded-[10px] bg-white/10 hover:bg-white/15 text-white/80 hover:text-white flex items-center justify-center transition-colors cursor-pointer shrink-0"
+                aria-label="Minimize panel"
                 title="Minimize Panel"
               >
-                <ChevronLeft className="w-4 h-4" />
+                <ChevronLeft aria-hidden="true" className="w-4 h-4" />
               </button>
             }
           />

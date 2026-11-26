@@ -33,6 +33,7 @@ import {
 import { WeatherMap } from './components/WeatherMap';
 import { WeatherSidebar } from './components/WeatherSidebar';
 import { MobileShell } from './components/mobile/MobileShell';
+import { FirstRunNotice } from './components/FirstRunNotice';
 import { useIsDesktop } from './hooks/useIsDesktop';
 import {
   AppData,
@@ -604,6 +605,7 @@ export function App() {
       <RadarDataProvider value={radarData}>
         <div className="relative w-full h-dvh overflow-hidden bg-[#111113] text-white font-sans flex flex-col">
           {quotaBanner}
+          <FirstRunNotice />
           <div className="relative flex-1 flex items-start lg:items-center justify-center bg-[#1a1a1c] pt-[calc(env(safe-area-inset-top)+24px)] lg:pt-0">
             <div className="rounded-[20px] bg-white/[0.08] border border-white/10 backdrop-blur-xl shadow-2xl px-6 py-5 text-center max-w-sm mx-4">
               <div className="text-sm font-semibold text-white">
@@ -635,6 +637,7 @@ export function App() {
       <RadarDataProvider value={radarData}>
         <div className="relative w-full h-dvh overflow-hidden bg-[#111113] text-white font-sans flex flex-col">
           {quotaBanner}
+          <FirstRunNotice />
           <div className="relative flex-1 overflow-hidden">
             <WeatherMap />
             {shellEl}

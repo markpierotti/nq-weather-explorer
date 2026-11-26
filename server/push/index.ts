@@ -14,6 +14,7 @@ import {
   findSubscription,
   pruneGone,
   seedSeen,
+  pruneSeen,
   checkAndUpdate,
   persist,
   meetsMinSeverity,
@@ -87,13 +88,26 @@ function validateSubscriptionBody(body: any): {
   if (typeof endpoint !== 'string' || !endpoint.startsWith('https://')) {
     return { ok: false, error: 'subscription.endpoint must be an https:// URL' };
   }
+  let endpointHost = '';
+  try {
+    endpointHost = new URL(endpoint).hostname;
+  } catch {
+    return { ok: false, error: 'subscription.endpoint is not a valid URL' };
+  }
+  const ALLOWED_PUSH_HOSTS = [/^fcm\.googleapis\.com$/, /^updates\.push\.services\.mozilla\.com$/, /\.notify\.windows\.com$/, /^web\.push\.apple\.com$/];
+  if (!ALLOWED_PUSH_HOSTS.some((re) => re.test(endpointHost))) {
+    return { ok: false, error: 'subscription.endpoint must be a browser push service URL' };
+  }
   if (!keys || typeof keys !== 'object' || typeof keys.p256dh !== 'string' || typeof keys.auth !== 'string') {
     return { ok: false, error: 'subscription.keys.p256dh and .auth are required' };
+  }
+  if (endpoint.length > 1000 || keys.p256dh.length > 200 || keys.auth.length > 100) {
+    return { ok: false, error: 'subscription fields are too long' };
   }
 
   // Validate filters
   const tags = Array.isArray(corridorTags)
-    ? corridorTags.filter((t: unknown) => typeof t === 'string')
+    ? corridorTags.filter((t: unknown) => typeof t === 'string' && t.length <= 40).slice(0, 20)
     : [];
 
   const cats = Array.isArray(categories)
@@ -138,6 +152,10 @@ export function registerPushRoutes(app: Express): void {
     const result = validateSubscriptionBody(req.body);
     if (!result.ok || !result.record) {
       return res.status(400).json({ error: result.error || 'Invalid request' });
+    }
+    const MAX_SUBSCRIPTIONS = 500;
+    if (!findSubscription(result.record.endpoint) && getState().subscriptions.length >= MAX_SUBSCRIPTIONS) {
+      return res.status(503).json({ error: 'Subscription limit reached on this server.' });
     }
     upsertSubscription(result.record);
     return res.json({ ok: true, endpoint: result.record.endpoint });
@@ -266,17 +284,16 @@ let isFirstPoll = true;
 
 async function poll(): Promise<void> {
   try {
-    const [trafficResult, bomResult, gaugeResult] = await Promise.all([
+    const results = await Promise.allSettled([
       getFeedCached('traffic'),
       getFeedCached('bom-warnings'),
       getFeedCached('gauges'),
     ]);
-
-    const allItems: EmergencyFeatureItem[] = [
-      ...trafficResult.value,
-      ...bomResult.value,
-      ...gaugeResult.value,
-    ];
+    const allItems: EmergencyFeatureItem[] = [];
+    for (const r of results) {
+      if (r.status === 'fulfilled') allItems.push(...r.value.value);
+      else console.warn('[push] Feed unavailable this poll:', r.reason instanceof Error ? r.reason.message : r.reason);
+    }
 
     const st = getState();
 
@@ -297,6 +314,7 @@ async function poll(): Promise<void> {
         notifications.push({ item, reason: result });
       }
     }
+    pruneSeen(allItems.map((i) => i.id));
     persist(); // batch-persist the dedupe map
 
     if (notifications.length === 0) return;

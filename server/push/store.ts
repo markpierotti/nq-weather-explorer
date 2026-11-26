@@ -28,6 +28,8 @@ export interface PushState {
   subscriptions: PushSubscriptionRecord[];
   /** Last-seen severity per emergency item id — used for new-item and escalation detection. */
   seenSeverityById: Record<string, EmergencySeverity>;
+  /** Epoch ms each item id was last present in a feed; used to prune old ids. */
+  lastSeenAtById?: Record<string, number>;
 }
 
 // ---------------------------------------------------------------------------
@@ -43,7 +45,7 @@ function stateFilePath(): string {
 // In-memory singleton
 // ---------------------------------------------------------------------------
 
-let state: PushState = { subscriptions: [], seenSeverityById: {} };
+let state: PushState = { subscriptions: [], seenSeverityById: {}, lastSeenAtById: {} };
 let loaded = false;
 
 export function getState(): PushState {
@@ -66,22 +68,26 @@ function loadSync(): void {
         seenSeverityById: parsed.seenSeverityById && typeof parsed.seenSeverityById === 'object'
           ? parsed.seenSeverityById
           : {},
+        lastSeenAtById: parsed.lastSeenAtById && typeof parsed.lastSeenAtById === 'object'
+          ? parsed.lastSeenAtById
+          : {},
       };
     }
   } catch {
     // Corrupted file → start fresh
-    state = { subscriptions: [], seenSeverityById: {} };
+    state = { subscriptions: [], seenSeverityById: {}, lastSeenAtById: {} };
   }
   loaded = true;
 }
 
 export function persist(): void {
+  if (!loaded) loadSync();
   const fp = stateFilePath();
   const dir = path.dirname(fp);
   try {
     fs.mkdirSync(dir, { recursive: true });
     const tmp = `${fp}.tmp.${process.pid}`;
-    fs.writeFileSync(tmp, JSON.stringify(state, null, 2));
+    fs.writeFileSync(tmp, JSON.stringify(state));
     fs.renameSync(tmp, fp);
   } catch (err) {
     console.error('[push/store] Failed to persist state:', err);
@@ -93,6 +99,7 @@ export function persist(): void {
 // ---------------------------------------------------------------------------
 
 export function upsertSubscription(rec: PushSubscriptionRecord): void {
+  if (!loaded) loadSync();
   const idx = state.subscriptions.findIndex((s) => s.endpoint === rec.endpoint);
   if (idx >= 0) {
     state.subscriptions[idx] = rec;
@@ -103,6 +110,7 @@ export function upsertSubscription(rec: PushSubscriptionRecord): void {
 }
 
 export function removeSubscription(endpoint: string): boolean {
+  if (!loaded) loadSync();
   const before = state.subscriptions.length;
   state.subscriptions = state.subscriptions.filter((s) => s.endpoint !== endpoint);
   if (state.subscriptions.length !== before) {
@@ -113,6 +121,7 @@ export function removeSubscription(endpoint: string): boolean {
 }
 
 export function findSubscription(endpoint: string): PushSubscriptionRecord | undefined {
+  if (!loaded) loadSync();
   return state.subscriptions.find((s) => s.endpoint === endpoint);
 }
 
@@ -141,8 +150,28 @@ export function meetsMinSeverity(itemSeverity: EmergencySeverity, minSeverity: E
   return severityRank(itemSeverity) >= severityRank(minSeverity);
 }
 
+const SEEN_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
+
+/** Mark ids as present now and drop ids not seen for 7 days (keeps the state file bounded). */
+export function pruneSeen(presentIds: string[]): void {
+  if (!loaded) loadSync();
+  const now = Date.now();
+  const lastSeen = (state.lastSeenAtById ??= {});
+  for (const id of presentIds) lastSeen[id] = now;
+  for (const id of Object.keys(state.seenSeverityById)) {
+    const t = lastSeen[id];
+    if (t === undefined) {
+      lastSeen[id] = now; // legacy entry: start its clock now
+    } else if (now - t > SEEN_RETENTION_MS) {
+      delete state.seenSeverityById[id];
+      delete lastSeen[id];
+    }
+  }
+}
+
 /** Seed the dedupe map from a fresh set of items (first boot). */
 export function seedSeen(items: EmergencyFeatureItem[]): void {
+  if (!loaded) loadSync();
   for (const item of items) {
     state.seenSeverityById[item.id] = item.severity;
   }
@@ -155,6 +184,7 @@ export function seedSeen(items: EmergencyFeatureItem[]): void {
  * Also updates the seen map (but does NOT persist — caller batches that).
  */
 export function checkAndUpdate(item: EmergencyFeatureItem): 'new' | 'escalated' | null {
+  if (!loaded) loadSync();
   const prev = state.seenSeverityById[item.id];
   if (prev === undefined) {
     state.seenSeverityById[item.id] = item.severity;

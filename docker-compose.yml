@@ -6,7 +6,8 @@ services:
       NODE_ENV: production
       DATA_DIR: /app/data
     ports:
-      - "3000:3000"
+      # Bind to localhost only; expose publicly via the TLS reverse proxy.
+      - "127.0.0.1:3000:3000"
     volumes:
       - ./data:/app/data
     restart: unless-stopped

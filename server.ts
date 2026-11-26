@@ -12,6 +12,7 @@ import { createServer as createViteServer } from 'vite';
 import { registerFeedRoutes } from './server/feeds/index';
 import { registerPushRoutes, startPushPoller } from './server/push/index';
 import { registerBriefingRoutes } from './server/briefing';
+import { rateLimit } from './server/rateLimit';
 
 function parseCoordPair(latRaw: unknown, lngRaw: unknown): { lat: number; lng: number } | null {
   if (typeof latRaw !== 'string' && typeof latRaw !== 'number') return null;
@@ -37,6 +38,16 @@ function parseBoundedInt(raw: unknown, defVal: number, minVal: number, maxVal: n
   return Math.max(minVal, Math.min(maxVal, n));
 }
 
+/** Insert into a Map used as a cache, evicting the oldest entries beyond maxEntries. */
+function setBounded<K, V>(map: Map<K, V>, key: K, value: V, maxEntries: number): void {
+  map.delete(key);
+  map.set(key, value);
+  while (map.size > maxEntries) {
+    const oldest = map.keys().next().value as K;
+    map.delete(oldest);
+  }
+}
+
 
 dotenv.config();
 
@@ -44,7 +55,13 @@ const app = express();
 // Number of reverse-proxy hops in front of the app (e.g. 1 for nginx/Caddy on a VPS).
 app.set('trust proxy', Number.parseInt(process.env.TRUST_PROXY || '1', 10) || false);
 const PORT = 3000;
-app.use(express.json());
+app.use(express.json({ limit: '64kb' }));
+
+// Per-IP rate limits on routes that spend paid API quota (Gemini, Google Weather/Maps).
+app.use('/api/briefing', rateLimit({ windowMs: 60_000, max: 6, name: 'AI briefing' }));
+app.use('/api/weather', rateLimit({ windowMs: 60_000, max: 60, name: 'weather' }));
+app.use(['/api/geocode', '/api/places'], rateLimit({ windowMs: 60_000, max: 30, name: 'places/geocode' }));
+app.use('/api/push', rateLimit({ windowMs: 60_000, max: 10, name: 'push' }));
 
 // -------------------------------------------------------------
 // Two API Keys Architecture:
@@ -424,15 +441,13 @@ app.get('/api/geocode/reverse', async (req, res) => {
 });
 
 // 10. Places API (New) - Nearby Search by Lat/Lng
-app.all(['/api/places/nearby', '/api/places/searchNearby'], async (req, res) => {
-  const lat = req.query.lat || req.body?.lat;
-  const lng = req.query.lng || req.body?.lng;
-  const radius = req.query.radius || req.body?.radius || 15000;
-  const mapsKey = getMapsApiKey();
-
-  if (!lat || !lng) {
-    return res.status(400).json({ error: 'lat and lng parameters are required' });
+app.get(['/api/places/nearby', '/api/places/searchNearby'], async (req, res) => {
+  const coords = parseCoordPair(req.query.lat, req.query.lng);
+  if (!coords) {
+    return res.status(400).json({ error: 'Valid numeric lat and lng query parameters are required' });
   }
+  const radius = parseBoundedInt(req.query.radius, 15000, 100, 50000);
+  const mapsKey = getMapsApiKey();
 
   try {
     const url = 'https://places.googleapis.com/v1/places:searchNearby';
@@ -441,16 +456,17 @@ app.all(['/api/places/nearby', '/api/places/searchNearby'], async (req, res) => 
       locationRestriction: {
         circle: {
           center: {
-            latitude: parseFloat(String(lat)),
-            longitude: parseFloat(String(lng)),
+            latitude: coords.lat,
+            longitude: coords.lng,
           },
-          radius: parseFloat(String(radius)),
+          radius,
         },
       },
     };
 
     const response = await fetch(url, {
       method: 'POST',
+      redirect: 'error',
       headers: {
         'Content-Type': 'application/json',
         'X-Goog-Api-Key': mapsKey,
@@ -490,9 +506,12 @@ app.get('/api/weather/weathernext3', async (req, res) => {
   const cacheKey = `${coords.lat.toFixed(2)}_${coords.lng.toFixed(2)}`;
   const now = Date.now();
 
-  if (!forceRefresh) {
+  // `force` may only bypass the cache once an entry is at least 5 minutes old (protects daily quota).
+  const WN3_MIN_FORCE_AGE_MS = 5 * 60 * 1000;
+  {
     const cached = wn3ServerCache.get(cacheKey);
-    if (cached && now - cached.fetchedAt < WN3_SERVER_CACHE_TTL_MS) {
+    const ttl = forceRefresh ? WN3_MIN_FORCE_AGE_MS : WN3_SERVER_CACHE_TTL_MS;
+    if (cached && now - cached.fetchedAt < ttl) {
       return res.json({ ...cached.payload, serverCached: true, fetchedAt: cached.fetchedAt });
     }
   }
@@ -552,7 +571,7 @@ app.get('/api/weather/weathernext3', async (req, res) => {
       serverCached: false,
     };
 
-    wn3ServerCache.set(cacheKey, { fetchedAt: now, payload });
+    setBounded(wn3ServerCache, cacheKey, { fetchedAt: now, payload }, 200);
     return res.json(payload);
   } catch (err: any) {
     const safeErr = redactApiKey(err, weatherKey);
@@ -583,7 +602,11 @@ app.get('/api/emergency/proxy', async (req, res) => {
   if (
     parsedUrl.protocol !== 'https:' ||
     !ALLOWED_EMERGENCY_HOSTS.has(parsedUrl.hostname) ||
-    !parsedUrl.pathname.startsWith('/dashboard/')
+    !parsedUrl.pathname.startsWith('/dashboard/') ||
+    parsedUrl.search !== '' ||
+    parsedUrl.username ||
+    parsedUrl.password ||
+    parsedUrl.port
   ) {
     return res.status(403).json({ error: 'Host or path not permitted for emergency proxy' });
   }
@@ -592,12 +615,13 @@ app.get('/api/emergency/proxy', async (req, res) => {
   const cached = emergencyProxyCache.get(cacheKey);
   if (cached && Date.now() - cached.fetchedAt < EMERGENCY_CACHE_TTL_MS) {
     res.status(cached.status);
-    res.setHeader('Content-Type', cached.contentType);
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
     return res.send(cached.body);
   }
 
   try {
     const upstream = await fetch(cacheKey, {
+      redirect: 'error',
       headers: {
         Accept: 'application/json, text/plain, */*',
         'User-Agent': 'NorthQldWeatherExplorer/1.0',
@@ -606,19 +630,23 @@ app.get('/api/emergency/proxy', async (req, res) => {
     });
     const text = await upstream.text();
     const contentType = upstream.headers.get('content-type') || 'application/json; charset=utf-8';
+    if (upstream.ok && !contentType.includes('json') && !/^[\[{]/.test(text.trim())) {
+      return res.status(502).json({ error: 'Upstream returned non-JSON content' });
+    }
     if (upstream.ok) {
-      emergencyProxyCache.set(cacheKey, {
+      setBounded(emergencyProxyCache, cacheKey, {
         fetchedAt: Date.now(),
         status: upstream.status,
         contentType,
         body: text,
-      });
+      }, 50);
     }
     res.status(upstream.status);
-    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
     return res.send(text);
   } catch (err: any) {
-    return res.status(502).json({ error: err?.message || 'Upstream Guardian IMS fetch failed' });
+    console.warn('[emergency/proxy]', err?.message || err);
+    return res.status(502).json({ error: 'Upstream Guardian IMS fetch failed' });
   }
 });
 

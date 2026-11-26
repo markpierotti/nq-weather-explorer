@@ -34,8 +34,9 @@ export function SummaryWidgets({
   isLoading = false,
 }: SummaryWidgetsProps) {
   const isMetric = unitSystem === 'METRIC';
-  const current = weatherBundle?.current;
-  const fallbackHour = weatherBundle?.hourly?.[0];
+  // Never present the offline simulated estimate as live conditions.
+  const current = weatherBundle?.isSimulated ? undefined : weatherBundle?.current;
+  const fallbackHour = weatherBundle?.isSimulated ? undefined : weatherBundle?.hourly?.[0];
 
   if (isLoading && !current && !fallbackHour) {
     return (

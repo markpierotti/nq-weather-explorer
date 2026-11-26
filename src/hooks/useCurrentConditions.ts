@@ -8,7 +8,7 @@ import { useAppData } from '../state/AppDataContext';
 export function useCurrentConditions() {
   const { weatherBundle, multiModelBundle, unitSystem, isLoadingWeather, isLoadingModels } = useAppData();
   const isMetric = unitSystem === 'METRIC';
-  const hasCurrentWeather = !!weatherBundle?.current && !weatherBundle?.isUnsupportedLocation;
+  const hasCurrentWeather = !!weatherBundle?.current && !weatherBundle?.isUnsupportedLocation && !weatherBundle?.isSimulated;
   const current = weatherBundle?.current;
   const first3h = multiModelBundle?.hourly3h?.[0];
   const todayRow = multiModelBundle?.daily7d?.[0];
@@ -55,6 +55,7 @@ export function useCurrentConditions() {
   return {
     isMetric,
     hasCurrentWeather,
+    isSimulated: !!weatherBundle?.isSimulated,
     current,
     todayRow,
     displayTemp,

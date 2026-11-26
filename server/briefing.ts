@@ -107,11 +107,11 @@ function parseBullets(rawText: string): string[] {
 // Structured briefing parser
 // ---------------------------------------------------------------------------
 
-const RISK_VALUES: BriefingRisk[] = ['LOW', 'MODERATE', 'HIGH', 'EXTREME'];
-
 function parseRisk(text: string): BriefingRisk {
-  const upper = text.toUpperCase();
-  for (const r of RISK_VALUES) if (upper.includes(r)) return r;
+  // Whole-word, most severe first: "flow"/"Highway" can't match, and any ambiguity errs high.
+  for (const r of ['EXTREME', 'HIGH', 'MODERATE', 'LOW'] as const) {
+    if (new RegExp(`\\b${r}\\b`, 'i').test(text)) return r;
+  }
   return 'LOW';
 }
 
@@ -353,6 +353,17 @@ function classifyChatIntent(question: string): ChatIntent {
   return 'general';
 }
 
+/** JSON-stringify untrusted client data for a prompt, capped in size. */
+function clientJson(value: unknown, maxChars = 6000): string {
+  let s: string;
+  try {
+    s = JSON.stringify(value ?? null);
+  } catch {
+    s = 'null';
+  }
+  return s.length > maxChars ? `${s.slice(0, maxChars)}…[truncated]` : s;
+}
+
 function multiModelSummaryToFacts(multiModelSummary: unknown): GroundingFactInput[] {
   if (!multiModelSummary || typeof multiModelSummary !== 'object') return [];
   const mm = multiModelSummary as Record<string, any>;
@@ -360,23 +371,23 @@ function multiModelSummaryToFacts(multiModelSummary: unknown): GroundingFactInpu
 
   if (mm.spreadOverview) {
     facts.push({
-      factText: `Multi-model forecast spread for ${mm.location || 'selected location'}: ${JSON.stringify(mm.spreadOverview)}.`,
-      attributes: { source: 'Multi-Model Ensemble (WeatherNext 2 / BOM / ECMWF / GFS)', category: 'forecast' },
+      factText: `Multi-model forecast spread for ${mm.location || 'selected location'}: ${clientJson(mm.spreadOverview, 1500)}.`,
+      attributes: { source: 'Client-supplied (unverified) — Multi-Model Ensemble (WeatherNext 2 / BOM / ECMWF / GFS)', category: 'forecast' },
     });
   }
   if (Array.isArray(mm.next3Days)) {
     for (const day of mm.next3Days.slice(0, 3)) {
       facts.push({
-        factText: `Forecast day ${day.day || 'upcoming'}: ${JSON.stringify(day)}.`,
-        attributes: { source: 'Multi-Model Ensemble', category: 'forecast' },
+        factText: `Forecast day ${day.day || 'upcoming'}: ${clientJson(day, 1500)}.`,
+        attributes: { source: 'Client-supplied (unverified) — Multi-Model Ensemble', category: 'forecast' },
       });
     }
   }
   if (Array.isArray(mm.bomWarnings) && mm.bomWarnings.length > 0) {
     for (const w of mm.bomWarnings.slice(0, 5)) {
       facts.push({
-        factText: `BOM location warning: ${w.title || w.shortTitle || JSON.stringify(w)} (issued ${formatAest(w.issueTime)}).`,
-        attributes: { source: 'Bureau of Meteorology (BOM QLD)', category: 'bom_warning' },
+        factText: `BOM location warning: ${w.title || w.shortTitle || clientJson(w, 1500)} (issued ${formatAest(w.issueTime)}).`,
+        attributes: { source: 'Client-supplied (unverified) — Bureau of Meteorology (BOM QLD)', category: 'bom_warning' },
       });
     }
   }
@@ -428,10 +439,15 @@ function buildSelectedFacts(
   }
 
   // Include any browser-supplied blocked feed labels (e.g. Guardian IMS / Ergon) if present
-  const blockedFeeds = (browserEmergencySummary as any)?.blockedFeeds;
-  if (Array.isArray(blockedFeeds) && blockedFeeds.length > 0) {
+  const blockedFeeds = (Array.isArray((browserEmergencySummary as any)?.blockedFeeds)
+    ? (browserEmergencySummary as any).blockedFeeds
+    : [])
+    .filter((f: unknown): f is string => typeof f === 'string')
+    .map((f: string) => f.slice(0, 80))
+    .slice(0, 10);
+  if (blockedFeeds.length > 0) {
     facts.push({
-      factText: `Browser-reported unreachable/blocked council or utility feeds: ${blockedFeeds.join(', ')}.`,
+      factText: `Client-reported (unverified) unreachable/blocked council or utility feeds: ${blockedFeeds.join(', ')}.`,
       attributes: { source: 'Client Feed Health', category: 'feed_health' },
     });
   }
@@ -496,6 +512,7 @@ async function handleCorridorBriefing(req: Request, res: Response): Promise<void
   }
 
   const { locationName, multiModelSummary, emergencySummary, blockedFeedsCount } = req.body || {};
+  const promptLocation = String(locationName || '').slice(0, 80);
 
   try {
     const snapshot = await fetchLiveFeedSnapshot();
@@ -507,7 +524,7 @@ async function handleCorridorBriefing(req: Request, res: Response): Promise<void
     const model = geminiModel();
 
     const systemInstruction = [
-      `You are a life-safety-focused North Queensland meteorological and Bruce Highway (A1) corridor duty officer for ${locationName || 'Ayr / Burdekin & Townsville'} (Ayr <-> Home Hill <-> Giru <-> Townsville).`,
+      `You are a life-safety-focused North Queensland meteorological and Bruce Highway (A1) corridor duty officer for ${promptLocation || 'Ayr / Burdekin & Townsville'} (Ayr <-> Home Hill <-> Giru <-> Townsville).`,
       `STRICT ACCURACY & FAIL-CLOSED RULES:`,
       `1. Base every road, river gauge, and warning statement strictly on VERIFIED_LIVE_FACTS below. Never speculate, invent figures, or assume conditions not stated in the facts.`,
       `2. NEVER declare a road "open", "clear", or "safe to drive" simply because 0 closures are listed. Instead state the exact QLDTraffic count and AEST timestamp (e.g. "QLDTraffic lists 0 active closures as of HH:MM AEST") and note that local council roads or rapidly rising water may not be listed.`,
@@ -541,7 +558,7 @@ async function handleCorridorBriefing(req: Request, res: Response): Promise<void
     const grounding = await checkAnswerGrounding(rawText, facts);
 
     const finalRawText =
-      grounding.checked && !grounding.passed && (grounding.supportScore ?? 0) < 0.5
+      grounding.enabled && !grounding.passed
         ? buildFailClosedFallback(snapshot, 'general')
         : rawText;
 
@@ -582,13 +599,16 @@ async function handleCycloneSynthesis(req: Request, res: Response): Promise<void
   }
 
   const { locationName, lat, lng, multiModelSummary, cycloneAndRoadItems } = req.body || {};
+  const promptLocation = String(locationName || '').slice(0, 80);
+  const promptLat = Number.isFinite(Number(lat)) ? Number(lat) : -19.57;
+  const promptLng = Number.isFinite(Number(lng)) ? Number(lng) : 147.41;
 
   try {
     const ai = new GoogleGenAI({ apiKey: key });
     const model = geminiModel();
 
     const prompt = [
-      `You are a North Queensland tropical cyclone & severe weather specialist briefing operations for Ayr / Burdekin (-19.57, 147.41), Townsville (-19.26, 146.82), and the active target ${locationName || 'Ayr / Townsville'} (${lat ?? -19.57}, ${lng ?? 147.41}).`,
+      `You are a North Queensland tropical cyclone & severe weather specialist briefing operations for Ayr / Burdekin (-19.57, 147.41), Townsville (-19.26, 146.82), and the active target ${promptLocation || 'Ayr / Townsville'} (${promptLat}, ${promptLng}).`,
       `Use Google Search grounding right now to retrieve the latest:`,
       `1) Google Weather (WeatherNext 3) forecast & wind/rain outlook for Ayr and Townsville QLD`,
       `2) Australian Bureau of Meteorology (BOM) Queensland Tropical Cyclone Track Map / 7-day Cyclone Outlook / Coral Sea warnings`,
@@ -596,10 +616,10 @@ async function handleCycloneSynthesis(req: Request, res: Response): Promise<void
       ``,
       `Also incorporate our live local telemetry below:`,
       `=== LIVE ENSEMBLE & BOM DATA ===`,
-      JSON.stringify(multiModelSummary || {}, null, 2),
+      clientJson(multiModelSummary || {}, 8000),
       ``,
       `=== ACTIVE CYCLONE TRACK / CORRIDOR FEED ITEMS ===`,
-      JSON.stringify(cycloneAndRoadItems || [], null, 2),
+      clientJson(Array.isArray(cycloneAndRoadItems) ? cycloneAndRoadItems.slice(0, 40) : [], 8000),
       ``,
       `Output a single valid JSON object (no markdown fences needed, or \`\`\`json fenced) with EXACTLY these keys:`,
       `{`,
@@ -688,9 +708,26 @@ async function handleBriefingChat(req: Request, res: Response): Promise<void> {
     res.status(400).json({ error: 'messages array is required' });
     return;
   }
+  const MAX_CHAT_MESSAGES = 20;
+  const MAX_MESSAGE_CHARS = 2000;
+  if (
+    body.messages.length > MAX_CHAT_MESSAGES ||
+    !body.messages.every(
+      (m) =>
+        m &&
+        (m.role === 'user' || m.role === 'model') &&
+        typeof m.text === 'string' &&
+        m.text.length <= MAX_MESSAGE_CHARS,
+    )
+  ) {
+    res.status(400).json({
+      error: `messages must be at most ${MAX_CHAT_MESSAGES} items, each with role and text (max ${MAX_MESSAGE_CHARS} chars)`,
+    });
+    return;
+  }
 
   const ctx = body.context || ({} as BriefingChatRequest['context']);
-  const locationName = ctx.locationName || 'Ayr / Townsville';
+  const locationName = String(ctx.locationName || '').slice(0, 80) || 'Ayr / Townsville';
   const latestUserQuestion =
     [...body.messages].reverse().find((m) => m.role === 'user')?.text || '';
   const intent = classifyChatIntent(latestUserQuestion);
@@ -734,7 +771,7 @@ async function handleBriefingChat(req: Request, res: Response): Promise<void> {
       !telemetryFeedsHealthy;
 
     const systemInstruction = [
-      `You are a life-safety-focused North Queensland weather and road corridor duty officer for ${locationName} (${ctx.lat ?? -19.57}, ${ctx.lng ?? 147.41}), specializing in the Bruce Highway (A1) corridor (Ayr <-> Home Hill <-> Giru <-> Townsville).`,
+      `You are a life-safety-focused North Queensland weather and road corridor duty officer for ${locationName} (${Number.isFinite(Number(ctx.lat)) ? Number(ctx.lat) : -19.57}, ${Number.isFinite(Number(ctx.lng)) ? Number(ctx.lng) : 147.41}), specializing in the Bruce Highway (A1) corridor (Ayr <-> Home Hill <-> Giru <-> Townsville).`,
       `Detected query focus: ${intent}.`,
       ``,
       `NON-NEGOTIABLE LIFE-SAFETY & GROUNDING RULES:`,
@@ -777,7 +814,7 @@ async function handleBriefingChat(req: Request, res: Response): Promise<void> {
       const grounding = await checkAnswerGrounding(candidateText, facts);
 
       const outputText =
-        grounding.checked && !grounding.passed && (grounding.supportScore ?? 0) < 0.5
+        grounding.enabled && !grounding.passed
           ? buildFailClosedFallback(snapshot, intent)
           : candidateText;
 

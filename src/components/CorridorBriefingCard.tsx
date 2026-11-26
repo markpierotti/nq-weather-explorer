@@ -749,6 +749,8 @@ export function CorridorBriefingCard({
 
             <form onSubmit={handleChatSubmit} className="flex items-center gap-1.5">
               <input
+                id="briefing-chat-input"
+                name="briefing-chat-question"
                 type="text"
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}

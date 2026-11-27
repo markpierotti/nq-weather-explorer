@@ -6,15 +6,19 @@
  *  - Pulls authoritative live QLDTraffic, BOM warnings, and river gauges directly
  *    from server/feeds/ instead of relying solely on browser-truncated summaries.
  *  - Filters follow-up chat context by intent and corridor before calling Gemini.
- *  - Enforces strict closed-world / fail-closed rules (temperature: 0.1, never
- *    infer "road is open" from zero alerts, explicitly flag stale/errored feeds).
+ *  - Enforces strict closed-world / fail-closed rules via the closed-world system
+ *    prompt + server-side Fact Ledger + CheckGrounding (never infer "road is open"
+ *    from zero alerts, explicitly flag stale/errored feeds). Gemini 4 ignores
+ *    sampling params (temperature/top_p/top_k), so none are sent.
+ *  - Uses the Interactions API with store: false (stateless; emergency prompts are
+ *    not retained server-side, and previous_interaction_id is never used).
  *  - Optionally verifies answers against the live Fact Ledger via Discovery Engine
  *    CheckGrounding (server/grounding.ts) when ENABLE_CHECK_GROUNDING=true.
  *
  * Gracefully degrades when GEMINI_API_KEY is unset (all endpoints return 503).
  */
 import type { Express, Request, Response } from 'express';
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI, type Interactions } from '@google/genai';
 import type {
   BriefingChatRequest,
   BriefingChatEvent,
@@ -47,8 +51,26 @@ function geminiModel(): string {
   return process.env.GEMINI_MODEL || 'gemini-4-hydrogen';
 }
 
+/** Prefer Google's own error message: Interactions APIError keeps the HTTP body on `.body`. */
+function apiErrorMessage(val: unknown): string | undefined {
+  const err = val as { status?: unknown; body?: unknown } | null;
+  if (!err || typeof err.body !== 'string' || !err.body) return undefined;
+  try {
+    const parsed = JSON.parse(err.body);
+    // Google returns either {error:{...}} or [{error:{...}}].
+    const msg = (Array.isArray(parsed) ? parsed[0] : parsed)?.error?.message;
+    if (typeof msg === 'string' && msg) return err.status ? `${err.status} ${msg}` : msg;
+  } catch {
+    /* non-JSON body: fall through to .message */
+  }
+  return undefined;
+}
+
+/** What viewers see when Gemini fails; the detailed reason stays in the server log. */
+const AI_UNAVAILABLE_MESSAGE = 'AI briefing is temporarily unavailable. Please try again later.';
+
 function redactKey(val: unknown, key: string): string {
-  let out = String((val as any)?.message || val || '');
+  let out = String(apiErrorMessage(val) || (val as any)?.message || val || '');
   out = out.replace(/([?&]key=)[^&\s"']+/gi, '$1[REDACTED]');
   if (key && key.length >= 8) out = out.split(key).join('[REDACTED]');
   return out;
@@ -72,16 +94,35 @@ function formatAest(input?: string | number | null): string {
 // Shared helpers
 // ---------------------------------------------------------------------------
 
-function extractCitations(response: any): GroundingCitation[] {
-  const rawChunks = response?.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+const GOOGLE_SEARCH_TOOL: Interactions.Tool = { type: 'google_search' };
+
+/** url_citation annotations -> GroundingCitation (Interactions API returns citations inline on text). */
+function annotationsToCitations(
+  annotations: Interactions.Annotation[] | undefined,
+): GroundingCitation[] {
+  const citations: GroundingCitation[] = [];
+  for (const anno of annotations || []) {
+    if (anno.type === 'url_citation' && anno.url) {
+      citations.push({ title: String(anno.title || anno.url), uri: String(anno.url) });
+    }
+  }
+  return citations;
+}
+
+/** Collect de-duplicated citations from the text content of model_output steps. */
+function extractCitations(steps: Interactions.Step[] | undefined): GroundingCitation[] {
   const citations: GroundingCitation[] = [];
   const seen = new Set<string>();
-  for (const chunk of rawChunks as any[]) {
-    const uri = chunk?.web?.uri;
-    const title = chunk?.web?.title || uri;
-    if (uri && !seen.has(uri)) {
-      seen.add(uri);
-      citations.push({ title: String(title), uri: String(uri) });
+  for (const step of steps || []) {
+    if (step.type !== 'model_output') continue;
+    for (const part of step.content || []) {
+      if (part.type !== 'text') continue;
+      for (const c of annotationsToCitations(part.annotations)) {
+        if (!seen.has(c.uri)) {
+          seen.add(c.uri);
+          citations.push(c);
+        }
+      }
     }
   }
   return citations;
@@ -543,18 +584,16 @@ async function handleCorridorBriefing(req: Request, res: Response): Promise<void
       `- **Next-24h operational recommendation:** Clear, conservative travel and monitoring guidance (remind travellers to verify QLDTraffic/BOM before departing and never enter floodwater).`,
     ].join('\n');
 
-    const response = await ai.models.generateContent({
+    const interaction = await ai.interactions.create({
       model,
-      contents: prompt,
-      config: {
-        systemInstruction,
-        temperature: 0.1,
-        ...(hasDegradedFeeds ? { tools: [{ googleSearch: {} }] } : {}),
-      },
+      input: prompt,
+      system_instruction: systemInstruction,
+      store: false,
+      ...(hasDegradedFeeds ? { tools: [GOOGLE_SEARCH_TOOL] } : {}),
     });
 
-    const rawText = (response.text || '').trim();
-    const citations = extractCitations(response);
+    const rawText = (interaction.output_text || '').trim();
+    const citations = extractCitations(interaction.steps);
     const grounding = await checkAnswerGrounding(rawText, facts);
 
     const finalRawText =
@@ -581,7 +620,7 @@ async function handleCorridorBriefing(req: Request, res: Response): Promise<void
   } catch (err: any) {
     const safeErr = redactKey(err, key);
     console.error('Gemini Corridor Briefing error:', safeErr);
-    res.status(500).json({ error: `Unable to generate AI Corridor Briefing: ${safeErr}` });
+    res.status(503).json({ error: AI_UNAVAILABLE_MESSAGE });
   }
 }
 
@@ -637,16 +676,14 @@ async function handleCycloneSynthesis(req: Request, res: Response): Promise<void
       `}`,
     ].join('\n');
 
-    const response = await ai.models.generateContent({
+    const interaction = await ai.interactions.create({
       model,
-      contents: prompt,
-      config: {
-        temperature: 0.1,
-        tools: [{ googleSearch: {} }],
-      },
+      input: prompt,
+      store: false,
+      tools: [GOOGLE_SEARCH_TOOL],
     });
 
-    const rawText = (response.text || '').trim();
+    const rawText = (interaction.output_text || '').trim();
     let parsed: any = null;
     try {
       const jsonMatch = rawText.match(/\{[\s\S]*\}/);
@@ -668,7 +705,7 @@ async function handleCycloneSynthesis(req: Request, res: Response): Promise<void
           .filter(Boolean)
           .slice(0, 3);
 
-    const citations = extractCitations(response);
+    const citations = extractCitations(interaction.steps);
 
     res.json({
       locationName: locationName || 'Ayr & Townsville Corridor',
@@ -686,7 +723,7 @@ async function handleCycloneSynthesis(req: Request, res: Response): Promise<void
   } catch (err: any) {
     const safeErr = redactKey(err, key);
     console.error('Gemini Cyclone Synthesis error:', safeErr);
-    res.status(500).json({ error: `Unable to run Cyclone Synthesis: ${safeErr}` });
+    res.status(503).json({ error: AI_UNAVAILABLE_MESSAGE });
   }
 }
 
@@ -740,9 +777,11 @@ async function handleBriefingChat(req: Request, res: Response): Promise<void> {
     'X-Accel-Buffering': 'no', // nginx
   });
 
+  // Listen on the response, not the request: on Node >= 16 `req` emits 'close' as soon as the
+  // request body is consumed, which would mark every client as disconnected before we reply.
   let clientDisconnected = false;
-  req.on('close', () => {
-    clientDisconnected = true;
+  res.on('close', () => {
+    if (!res.writableFinished) clientDisconnected = true;
   });
 
   const sendEvent = (event: BriefingChatEvent) => {
@@ -785,11 +824,13 @@ async function handleBriefingChat(req: Request, res: Response): Promise<void> {
       formatFactsBlock(facts),
     ].join('\n');
 
-    const contents: Array<{ role: string; parts: Array<{ text: string }> }> = body.messages.map(
-      (msg) => ({
-        role: msg.role === 'user' ? 'user' : 'model',
-        parts: [{ text: msg.text }],
-      }),
+    // Stateless multi-turn (store: false): replay the visible chat as user_input / model_output
+    // steps. The browser only keeps text, so prior turns carry no thought/tool signatures (same
+    // information the old generateContent history had).
+    const input: Interactions.Step[] = body.messages.map((msg) =>
+      msg.role === 'user'
+        ? { type: 'user_input', content: [{ type: 'text', text: msg.text }] }
+        : { type: 'model_output', content: [{ type: 'text', text: msg.text }] },
     );
 
     const ai = new GoogleGenAI({ apiKey: key });
@@ -797,20 +838,18 @@ async function handleBriefingChat(req: Request, res: Response): Promise<void> {
 
     if (isCheckGroundingEnabled()) {
       // Buffered verify-before-send mode: evaluate complete answer with CheckGrounding before emitting
-      const response = await ai.models.generateContent({
+      const interaction = await ai.interactions.create({
         model,
-        contents,
-        config: {
-          systemInstruction,
-          temperature: 0.1,
-          ...(allowWebSearch ? { tools: [{ googleSearch: {} }] } : {}),
-        },
+        input,
+        system_instruction: systemInstruction,
+        store: false,
+        ...(allowWebSearch ? { tools: [GOOGLE_SEARCH_TOOL] } : {}),
       });
 
       if (clientDisconnected) return;
 
-      const candidateText = (response.text || '').trim();
-      const citations = extractCitations(response);
+      const candidateText = (interaction.output_text || '').trim();
+      const citations = extractCitations(interaction.steps);
       const grounding = await checkAnswerGrounding(candidateText, facts);
 
       const outputText =
@@ -832,29 +871,34 @@ async function handleBriefingChat(req: Request, res: Response): Promise<void> {
       });
       sendEvent({ type: 'done' });
     } else {
-      // Live streaming mode (still uses hardened server-side Fact Ledger + closed-world prompt + temp 0.1)
-      const stream = await ai.models.generateContentStream({
+      // Live streaming mode (still uses hardened server-side Fact Ledger + closed-world prompt;
+      // no CheckGrounding pass because text is emitted as it arrives).
+      const stream = await ai.interactions.create({
         model,
-        contents,
-        config: {
-          systemInstruction,
-          temperature: 0.1,
-          ...(allowWebSearch ? { tools: [{ googleSearch: {} }] } : {}),
-        },
+        input,
+        system_instruction: systemInstruction,
+        store: false,
+        stream: true,
+        ...(allowWebSearch ? { tools: [GOOGLE_SEARCH_TOOL] } : {}),
       });
 
       const citationMap = new Map<string, GroundingCitation>();
-
-      for await (const chunk of stream) {
-        if (clientDisconnected) break;
-        const text = chunk.text || '';
-        if (text) {
-          sendEvent({ type: 'chunk', text });
+      const addCitations = (found: GroundingCitation[]) => {
+        for (const c of found) {
+          if (!citationMap.has(c.uri)) citationMap.set(c.uri, c);
         }
-        for (const c of extractCitations(chunk)) {
-          if (!citationMap.has(c.uri)) {
-            citationMap.set(c.uri, c);
+      };
+
+      for await (const event of stream) {
+        if (clientDisconnected) break;
+        if (event.event_type === 'step.delta') {
+          if (event.delta.type === 'text' && event.delta.text) {
+            sendEvent({ type: 'chunk', text: event.delta.text });
+          } else if (event.delta.type === 'text_annotation_delta') {
+            addCitations(annotationsToCitations(event.delta.annotations));
           }
+        } else if (event.event_type === 'interaction.completed') {
+          addCitations(extractCitations(event.interaction.steps));
         }
       }
 
@@ -883,7 +927,7 @@ async function handleBriefingChat(req: Request, res: Response): Promise<void> {
   } catch (err: any) {
     const safeErr = redactKey(err, key);
     console.error('Briefing chat error:', safeErr);
-    sendEvent({ type: 'error', error: safeErr });
+    sendEvent({ type: 'error', error: AI_UNAVAILABLE_MESSAGE });
   } finally {
     if (!res.writableEnded) {
       res.end();
